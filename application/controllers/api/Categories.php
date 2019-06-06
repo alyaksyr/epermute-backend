@@ -16,7 +16,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Cameras extends REST_Controller {
+class Categories extends REST_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -24,28 +24,31 @@ class Cameras extends REST_Controller {
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->model('camera_model','CameraModel');
+        $this->load->model('categorie_model','CategorieModel');
 
     }
 
     /**
-     * Get Camera 
+     * Get Type Article
      * @method: GET
      */
     public function index_get($param='')
     {
+        $categorie= array();
+
         if (empty($param)) {
-            $camera= array();
-            foreach ($this->CameraModel->all_camera() as $row)
+            
+            foreach ($this->CategorieModel->all_categorie() as $row)
             {
                 $data['id'] = $row['id'];
                 $data['code'] = $row['code'];
-                $data['type'] = $row['type'];
-                $data['resolution'] = $row['resolution'].' '.$row['unite'];
+                $data['libelle'] = $row['libelle'];
+                $data['created'] = $row['created_at'];
+                $data['updated'] = $row['updated_at'];
                 $data['infos'] = $row['infos'];
-                $camera[] = $data;  
+                $categorie[] = $data;  
             }     
-            if (empty($camera)) {
+            if (empty($categorie)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -53,19 +56,19 @@ class Cameras extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($camera, REST_Controller::HTTP_OK);
+                $this->set_response($categorie, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $row = $this->CameraModel->camera($param);
-            $camera['id'] = $row->id;
-            $camera['code'] = $row->code;
-            $camera['type'] = $row->type;
-            $camera['resolution'] = $row->resolution;
-            $camera['unite'] = $row->unite;
-            $camera['infos'] = $row->infos;
+            $row = $this->CategorieModel->categorie($param);
+            $categorie['id'] = $row->id;
+            $categorie['code'] = $row->code;
+            $categorie['libelle'] = $row->libelle;
+            $categorie['created'] = $row->created_at;
+            $categorie['updated'] = $row->updated_at;
+            $categorie['infos'] = $row->infos;
 
-            if (empty($camera)) {
+            if (empty($categorie)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -73,26 +76,25 @@ class Cameras extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($camera, REST_Controller::HTTP_OK);
+                $this->set_response($categorie, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($camera, REST_Controller::HTTP_OK);
+        $this->set_response($categorie, REST_Controller::HTTP_OK);
     }
 
     /**
-     * Create New pays
+     * Create New Type Article
      * @method: POST
      */
     public function index_post()
     {
-        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
-        $this->form_validation->set_data($_POST);
+        $_POST = $this->security->xss_clean($_POST);
 
-        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_camera.code]',
-            array('is_unique'=>'Ce code de pays existe déja !')
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_etat_article.code]',
+            array('is_unique'=>'Ce code existe déja !')
         );
-        $this->form_validation->set_rules('resolution', 'Resolution', 'trim|required|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -103,14 +105,14 @@ class Cameras extends REST_Controller {
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
 
-            $pays = $this->input->post();
-            $id = $this->CameraModel->create($pays);
+            $categorie = $this->input->post();
+            $id = $this->CategorieModel->create($categorie);
             
             if ($id>0 AND !empty($id)) {
                
                 $message = [
                     'status'=>true,
-                    'message'=>"Camera ajoutée avec succes!"
+                    'message'=>"Catégorie produit ajoutée avec succes!"
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
@@ -125,7 +127,7 @@ class Cameras extends REST_Controller {
     }
 
     /**
-     * Update Ville
+     * Update Categorie produit
      * @method: PUT
      */
     public function index_put()
@@ -133,9 +135,9 @@ class Cameras extends REST_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'Camera ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('id', 'Categorie ID', 'trim|required|numeric');
         $this->form_validation->set_rules('code', 'Code', 'trim|required');
-        $this->form_validation->set_rules('resolution', 'Resolution', 'trim|required|numeric');
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -145,14 +147,14 @@ class Cameras extends REST_Controller {
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
-            $camera = $this->input->post();
-            $camera['id'] = $this->input->post('id',TRUE);
+            $categorie = $this->input->post();
+            $categorie['id'] = $this->input->post('id',TRUE);
 
-            $outpout = $this->CameraModel->update($camera);
+            $outpout = $this->CategorieModel->update($categorie);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>true,
-                    'message'=>"Camera Modifiée avec succes!"
+                    'message'=>"Categorie Modifiée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -169,7 +171,7 @@ class Cameras extends REST_Controller {
     }
 
     /**
-     * Delete Pays
+     * Delete Type Article
      * @method: DELETE
      */
     public function index_delete($id)
@@ -179,18 +181,18 @@ class Cameras extends REST_Controller {
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
                 'status'=>FALSE,
-                'message'=>'L\'Id du type de camera n\'existe'
+                'message'=>'L\'Id  n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
         } else {
-            $camera= [
+            $categorie= [
                 'id'=>$id
             ];
-            $outpout = $this->CameraModel->delete($camera);
+            $outpout = $this->CategorieModel->delete($categorie);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>true,
-                    'message'=>"Camera supprimée avec succes!"
+                    'message'=>"Catégorie supprimée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_OK);

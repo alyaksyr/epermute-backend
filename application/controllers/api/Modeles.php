@@ -18,23 +18,37 @@ require APPPATH .'libraries/Format.php';
  */
 class Modeles extends REST_Controller {
 
-    protected $modele_table = 'aqi_pp_modele';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->database();
+        $this->load->model('modele_model','ModeleModel');
 
     }
 
+    /**
+     * Get Modeles 
+     * @method: GET
+     */
     public function index_get($param='')
     {
+        $modele= array();
+        $this->load->model('marque_model','MarqueModel');
 
         if (empty($param)) {
-            $data = $this->db->get($this->modele_table)->result();
-            if (empty($data)) {
+            
+            foreach ($this->ModeleModel->all_modele() as $row)
+            {
+                $data['id'] = $row['id'];
+                $data['code'] = $row['code'];
+                $data['libelle'] = $row['libelle'];
+                $data['marque'] = $this->MarqueModel->marque($row['id_marque']); 
+                $data['infos'] = $row['infos']; 
+                $modele[] = $data;  
+            }     
+            if (empty($modele)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -42,17 +56,18 @@ class Modeles extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($modele, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $this->db->select('*');
-            $this->db->from($this->modele_table);
-            $this->db->where('id',$param);
-            $this->db->or_where('code',$param);
-            $data = $this->db->get()->row_array();
+            $row = $this->ModeleModel->modele($param);
+            $modele['id'] = $row->id;
+            $modele['code'] = $row->code;
+            $modele['libelle'] = $row->libelle;
+            $modele['marque']=$this->MarqueModel->marque($row->id_pays);
+            $modele['infos'] = $row->infos;
 
-            if (empty($data)) {
+            if (empty($modele)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -60,62 +75,136 @@ class Modeles extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($modele, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($data, REST_Controller::HTTP_OK);
+        $this->set_response($modele, REST_Controller::HTTP_OK);
     }
 
+    /**
+     * Create New Modele
+     * @method: POST
+     */
     public function index_post()
     {
-        
-        $code = $this->input->post('code');
-        if ($this->valid_code($code)) {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-            $_POST = json_decode(file_get_contents('php://input'),true);
-            $data = $this->input->post();
-            $this->db->insert($this->modele_table,$data);
-
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_CREATED,
-                'message'=>'modele créé avec succès.'
-            ],
-            REST_Controller::HTTP_CREATED
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_modele.code]',
+            array('is_unique'=>'Ce code de modèle existe déja !')
         );
 
-        } else {
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_BAD_REQUEST,
-                'message'=>'Ce code existe deja !'
-            ],
-                REST_Controller::HTTP_BAD_REQUEST
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
             );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
 
+            $modele = $this->input->post();
+            $id = $this->ModeleModel->create($modele);
+            
+            if ($id>0 AND !empty($id)) {
+               
+                $message = [
+                    'status'=>true,
+                    'message'=>"Modèle ajouté avec succes!"
+                ];
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            } 
         }
     }
 
-    public function index_put($id)
+    /**
+     * Update Modele
+     * @method: PUT
+     */
+    public function index_put()
     {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-        $_POST = json_decode(file_get_contents('php://input'),true);
-        $data = $this->put();
-        $this->db->update($this->modele_table, $data, array('id'=>$id));
+        $this->form_validation->set_rules('id', 'Modele ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
 
-        $this->set_response(['modele modifié avec succès.'], REST_Controller::HTTP_CREATED);
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
+            );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
+            $modele = $this->input->post();
+            $modele['id'] = $this->input->post('id',TRUE);
+
+            $outpout = $this->ModeleModel->update($modele);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Modèle Modifié avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
+    /**
+     * Delete Modele
+     * @method: DELETE
+     */
     public function index_delete($id)
     {
-        $this->db->delete($this->modele_table, array('id'=>$id));
+        $id = $this->security->xss_clean($id);
 
-        $this->set_response(['modele supprimé avec succès.'], REST_Controller::HTTP_OK);
+        if (empty($id) AND !is_numeric($id)) {
+            $this->set_response([
+                'status'=>FALSE,
+                'message'=>'L\'Id du modèle n\'existe'
+            ],
+            REST_Controller::HTTP_NOT_FOUND);
+        } else {
+            $modele= [
+                'id'=>$id
+            ];
+            $outpout = $this->ModeleModel->delete($modele);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Modèle supprimé avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_OK);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
-
-    public function valid_code($code)
-    {
-        $qry = $this->db->get_where($this->modele_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)? true: false;              
-    }
-
 }

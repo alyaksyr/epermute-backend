@@ -18,7 +18,7 @@ require APPPATH . 'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Users extends REST_Controller {
+class Authentication extends REST_Controller {
 
     function __construct()
     {

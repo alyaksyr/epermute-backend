@@ -18,23 +18,35 @@ require APPPATH .'libraries/Format.php';
  */
 class Marques extends REST_Controller {
 
-    protected $marque_table = 'aqi_pp_marque';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->database();
+        $this->load->model('marque_model', 'MarqueModel');
 
     }
 
+  /**
+     * Get marque 
+     * @method: GET
+     */
     public function index_get($param='')
     {
+        $marque= array();
 
         if (empty($param)) {
-            $data = $this->db->get($this->marque_table)->result();
-            if (empty($data)) {
+            
+            foreach ($this->MarqueModel->all_marque() as $row)
+            {
+                $data['id'] = $row['id'];
+                $data['code'] = $row['code'];
+                $data['libelle'] = $row['libelle'];
+                $data['infos'] = $row['infos'];
+                $marque[] = $data;  
+            }     
+            if (empty($marque)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -42,17 +54,17 @@ class Marques extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($marque, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $this->db->select('*');
-            $this->db->from($this->marque_table);
-            $this->db->where('id',$param);
-            $this->db->or_where('code',$param);
-            $data = $this->db->get()->row_array();
+            $row = $this->MarqueModel->marque($param);
+            $marque['id'] = $row->id;
+            $marque['code'] = $row->code;
+            $marque['libelle'] = $row->libelle;
+            $marque['infos'] = $row->infos;
 
-            if (empty($data)) {
+            if (empty($marque)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -60,62 +72,137 @@ class Marques extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($marque, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($data, REST_Controller::HTTP_OK);
+        $this->set_response($marque, REST_Controller::HTTP_OK);
     }
 
+    /**
+     * Create New marque
+     * @method: POST
+     */
     public function index_post()
     {
-        
-        $code = $this->input->post('code');
-        if ($this->valid_code($code)) {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-            $_POST = json_decode(file_get_contents('php://input'),true);
-            $data = $this->input->post();
-            $this->db->insert($this->marque_table,$data);
-
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_CREATED,
-                'message'=>'marque créée avec succès.'
-            ],
-            REST_Controller::HTTP_CREATED
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_marque.code]',
+            array('is_unique'=>'Ce code existe déja !')
         );
 
-        } else {
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_BAD_REQUEST,
-                'message'=>'Ce code existe deja !'
-            ],
-                REST_Controller::HTTP_BAD_REQUEST
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
             );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
 
+            $marque = $this->input->post();
+            $id = $this->MarqueModel->create($marque);
+            
+            if ($id>0 AND !empty($id)) {
+               
+                $message = [
+                    'status'=>true,
+                    'message'=>"Marque ajoutée avec succes!"
+                ];
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            } 
         }
     }
 
-    public function index_put($id)
+    /**
+     * Update Marque
+     * @method: PUT
+     */
+    public function index_put()
     {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-        $_POST = json_decode(file_get_contents('php://input'),true);
-        $data = $this->put();
-        $this->db->update($this->marque_table, $data, array('id'=>$id));
+        $this->form_validation->set_rules('id', 'Marque ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
 
-        $this->set_response(['marque modifiée avec succès.'], REST_Controller::HTTP_CREATED);
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
+            );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
+            $marque = $this->input->post();
+            $marque['id'] = $this->input->post('id',TRUE);
+
+            $outpout = $this->MarqueModel->update($marque);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Marque Modifiée avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
+    /**
+     * Delete Marque
+     * @method: DELETE
+     */
     public function index_delete($id)
     {
-        $this->db->delete($this->marque_table, array('id'=>$id));
+        $id = $this->security->xss_clean($id);
 
-        $this->set_response(['marque supprimée avec succès.'], REST_Controller::HTTP_OK);
-    }
+        if (empty($id) AND !is_numeric($id)) {
+            $this->set_response([
+                'status'=>FALSE,
+                'message'=>'L\'Id de la marque n\'existe'
+            ],
+            REST_Controller::HTTP_NOT_FOUND);
+        } else {
+            $marque= [
+                'id'=>$id
+            ];
+            $outpout = $this->MarqueModel->delete($marque);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Marque supprimé avec succes!"
+                ];
 
-    public function valid_code($code)
-    {
-        $qry = $this->db->get_where($this->marque_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)? true: false;              
+                $this->response($message, REST_Controller::HTTP_OK);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
 }

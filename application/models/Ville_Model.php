@@ -6,52 +6,58 @@ class Ville_Model extends CI_Model
 {
     protected $ville_table = 'aqi_pp_ville';
 
-    public function valid_code($code){
-        $qry = $this->db->get_where($this->ville_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)?'true':'false';              
-    }
-
-    public function get_ville($str)
+    public function ville($id)
     {
-        $this->db->select('*');
-        $this->db->from($this->ville_table);
-        $this->db->where('id',$str);
-        $this->db->or_where('code',$str);
-        $qry = $this->db->get();
+        $qry = $this->db->get_where($this->ville_table,array('id'=>$id));
         return $qry->row();        
     }
 
-    public function get_ville_by_id_pays($str)
+    public function ville_by_code($code)
     {
-        $this->db->select('*');
-        $this->db->from($this->ville_table);
-        $this->db->where('id_pays',$str);
-        $qry = $this->db->get();
-        foreach($qry->result() as $row) {
-            $ville_data[]=$row;
-        }    
-        return $ville_data;  
+        $qry = $this->db->get_where($this->ville_table,array('code'=>$code));
+        return ($qry->num_rows() <= 0)? true: false;       
     }
 
-    public function fetch_all_villes()
+    public function ville_by_pays($id)
+    {
+        $qry = $this->db->get_where($this->ville_table,array('id'=>$id));
+        return $qry->result();  
+    }
+
+    public function all_villes()
     {
         $query = $this->db->get($this->ville_table);
-        foreach ($query->result() as $row) {
-            $ville_data[]=$row;
-        }
-        return $ville_data;
+        return $query->result();
     }
 
-    public function insert_ville(array $data)
+    public function create(array $data)
     {
-        return $this->db->insert($this->ville_table,  $data);
+        $this->db->insert($this->ville_table,  $data);
+        return $this->db->insert_id();
     }
 
-    public function update_ville($id)
+    public function update(array $data)
     {
-        $ville = $this->get_ville($id);
-        $this->db->where('id', $id);
-        return $this->db->update($this->ville_table,$ville);
+        $query = $this->db->get_where($this->ville_table,array('id'=>$data['id']));
+        if ($this->db->affected_rows()>0) {
+        
+            return $this->db->update($this->ville_table,$data,['id'=>$query->row('id')]);
+        } 
+        return false;
+    }
+
+    public function delete(array $data)
+    {
+        $query = $this->db->get_where($this->ville_table, $data);
+        if ($this->db->affected_rows()>0) {
+            $this->db->delete($this->ville_table, $data);
+            if ($this->db->affected_rows()>0) {
+                return true;
+            }
+            return false;
+        } 
+        return false;
+
     }
     
 }

@@ -17,24 +17,34 @@ require APPPATH .'libraries/Format.php';
  * @link            https://www.aquickintl.com
  */
 class Memoires extends REST_Controller {
-
-    protected $memoire_table = 'aqi_pp_memoire';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->database();
+        $this->load->model('memoire_model','MemoireModel');
 
     }
 
+    /**
+     * Get Memoire 
+     * @method: GET
+     */
     public function index_get($param='')
     {
-
         if (empty($param)) {
-            $data = $this->db->get($this->memoire_table)->result();
-            if (empty($data)) {
+            $memoire= array();
+            foreach ($this->MemoireModel->all_memoire() as $row)
+            {
+                $data['id'] = $row['id'];
+                $data['code'] = $row['code'];
+                $data['type'] = $row['type'];
+                $data['capacite'] = $row['capacite'].' '.$row['unite'];
+                $data['infos'] = $row['infos'];
+                $memoire[] = $data;  
+            }     
+            if (empty($memoire)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -42,17 +52,19 @@ class Memoires extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($memoire, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $this->db->select('*');
-            $this->db->from($this->memoire_table);
-            $this->db->where('id',$param);
-            $this->db->or_where('code',$param);
-            $data = $this->db->get()->row_array();
+            $row = $this->MemoireModel->memoire($param);
+            $memoire['id'] = $row->id;
+            $memoire['code'] = $row->code;
+            $memoire['type'] = $row->type;
+            $memoire['capacite'] = $row->capacite;
+            $memoire['unite'] = $row->unite;
+            $memoire['infos'] = $row->infos;
 
-            if (empty($data)) {
+            if (empty($memoire)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -60,62 +72,137 @@ class Memoires extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($memoire, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($data, REST_Controller::HTTP_OK);
+        $this->set_response($memoire, REST_Controller::HTTP_OK);
     }
 
+    /**
+     * Create New memoire
+     * @method: POST
+     */
     public function index_post()
     {
-        
-        $code = $this->input->post('code');
-        if ($this->valid_code($code)) {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-            $_POST = json_decode(file_get_contents('php://input'),true);
-            $data = $this->input->post();
-            $this->db->insert($this->memoire_table,$data);
-
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_CREATED,
-                'message'=>'memoire créée avec succès.'
-            ],
-            REST_Controller::HTTP_CREATED
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_memoire.code]',
+            array('is_unique'=>'Ce code existe déja !')
         );
+        $this->form_validation->set_rules('capacite', 'Capacite', 'trim|required|numeric');
 
-        } else {
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_BAD_REQUEST,
-                'message'=>'Ce code existe deja !'
-            ],
-                REST_Controller::HTTP_BAD_REQUEST
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
             );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
 
+            $memoire = $this->input->post();
+            $id = $this->MemoireModel->create($memoire);
+            
+            if ($id>0 AND !empty($id)) {
+               
+                $message = [
+                    'status'=>true,
+                    'message'=>"Mémoire ajoutée avec succes!"
+                ];
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            } 
         }
     }
 
-    public function index_put($id)
+    /**
+     * Update Memoire
+     * @method: PUT
+     */
+    public function index_put()
     {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-        $_POST = json_decode(file_get_contents('php://input'),true);
-        $data = $this->put();
-        $this->db->update($this->memoire_table, $data, array('id'=>$id));
+        $this->form_validation->set_rules('id', 'Memoire ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('capacite', 'Capacite', 'trim|required|numeric');
 
-        $this->set_response(['memoire modifiée avec succès.'], REST_Controller::HTTP_CREATED);
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
+            );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
+            $memoire = $this->input->post();
+            $memoire['id'] = $this->input->post('id',TRUE);
+
+            $outpout = $this->MemoireModel->update($memoire);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Memoire Modifiée avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
+    /**
+     * Delete Memoire
+     * @method: DELETE
+     */
     public function index_delete($id)
     {
-        $this->db->delete($this->memoire_table, array('id'=>$id));
+        $id = $this->security->xss_clean($id);
 
-        $this->set_response(['memoire supprimée avec succès.'], REST_Controller::HTTP_OK);
-    }
+        if (empty($id) AND !is_numeric($id)) {
+            $this->set_response([
+                'status'=>FALSE,
+                'message'=>'Cet Id n\'existe'
+            ],
+            REST_Controller::HTTP_NOT_FOUND);
+        } else {
+            $memoire= [
+                'id'=>$id
+            ];
+            $outpout = $this->MemoireModel->delete($memoire);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Memoire supprimée avec succes!"
+                ];
 
-    public function valid_code($code)
-    {
-        $qry = $this->db->get_where($this->memoire_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)? true: false;              
+                $this->response($message, REST_Controller::HTTP_OK);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
 }

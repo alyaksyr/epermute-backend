@@ -18,23 +18,35 @@ require APPPATH .'libraries/Format.php';
  */
 class Reseaux extends REST_Controller {
 
-    protected $reseau_table = 'aqi_pp_reseau';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->database();
+        $this->load->model('reseau_model','ReseauModel');
 
     }
 
+     /**
+     * Get Reseau 
+     * @method: GET
+     */
     public function index_get($param='')
     {
+        $reseau= array();
 
         if (empty($param)) {
-            $data = $this->db->get($this->reseau_table)->result();
-            if (empty($data)) {
+            
+            foreach ($this->ReseauModel->all_reseau() as $row)
+            {
+                $data['id'] = $row['id'];
+                $data['code'] = $row['code'];
+                $data['libelle'] = $row['libelle'];
+                $data['infos'] = $row['infos'];
+                $reseau[] = $data;  
+            }     
+            if (empty($reseau)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -42,17 +54,17 @@ class Reseaux extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($reseau, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $this->db->select('*');
-            $this->db->from($this->reseau_table);
-            $this->db->where('id',$param);
-            $this->db->or_where('code',$param);
-            $data = $this->db->get()->row_array();
+            $row = $this->ReseauModel->reseau($param);
+            $reseau['id'] = $row->id;
+            $reseau['code'] = $row->code;
+            $reseau['libelle'] = $row->libelle;
+            $reseau['infos'] = $row->infos;
 
-            if (empty($data)) {
+            if (empty($reseau)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -60,62 +72,137 @@ class Reseaux extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($reseau, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($data, REST_Controller::HTTP_OK);
+        $this->set_response($reseau, REST_Controller::HTTP_OK);
     }
 
+    /**
+     * Create New reseau
+     * @method: POST
+     */
     public function index_post()
     {
-        
-        $code = $this->input->post('code');
-        if ($this->valid_code($code)) {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-            $_POST = json_decode(file_get_contents('php://input'),true);
-            $data = $this->input->post();
-            $this->db->insert($this->reseau_table,$data);
-
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_CREATED,
-                'message'=>'reseau créé avec succès.'
-            ],
-            REST_Controller::HTTP_CREATED
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_reseau.code]',
+            array('is_unique'=>'Ce code existe déja !')
         );
 
-        } else {
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_BAD_REQUEST,
-                'message'=>'Ce code existe deja !'
-            ],
-                REST_Controller::HTTP_BAD_REQUEST
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
             );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
 
+            $reseau = $this->input->post();
+            $id = $this->ReseauModel->create($reseau);
+            
+            if ($id>0 AND !empty($id)) {
+               
+                $message = [
+                    'status'=>true,
+                    'message'=>"Reseau ajouté avec succes!"
+                ];
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            } 
         }
     }
 
-    public function index_put($id)
+    /**
+     * Update Reseau
+     * @method: PUT
+     */
+    public function index_put()
     {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-        $_POST = json_decode(file_get_contents('php://input'),true);
-        $data = $this->put();
-        $this->db->update($this->reseau_table, $data, array('id'=>$id));
+        $this->form_validation->set_rules('id', 'Reseau ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
 
-        $this->set_response(['reseau modifié avec succès.'], REST_Controller::HTTP_CREATED);
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
+            );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
+            $reseau = $this->input->post();
+            $reseau['id'] = $this->input->post('id',TRUE);
+
+            $outpout = $this->ReseauModel->update($reseau);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Reseau Modifié avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
+    /**
+     * Delete Marque
+     * @method: DELETE
+     */
     public function index_delete($id)
     {
-        $this->db->delete($this->reseau_table, array('id'=>$id));
+        $id = $this->security->xss_clean($id);
 
-        $this->set_response(['reseau supprimée avec succès.'], REST_Controller::HTTP_OK);
-    }
+        if (empty($id) AND !is_numeric($id)) {
+            $this->set_response([
+                'status'=>FALSE,
+                'message'=>'Cet id n\'existe'
+            ],
+            REST_Controller::HTTP_NOT_FOUND);
+        } else {
+            $reseau= [
+                'id'=>$id
+            ];
+            $outpout = $this->ReseauModel->delete($reseau);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Reseau supprimé avec succes!"
+                ];
 
-    public function valid_code($code)
-    {
-        $qry = $this->db->get_where($this->reseau_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)? true: false;              
+                $this->response($message, REST_Controller::HTTP_OK);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
 }

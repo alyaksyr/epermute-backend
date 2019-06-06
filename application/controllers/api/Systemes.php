@@ -18,23 +18,37 @@ require APPPATH .'libraries/Format.php';
  */
 class Systemes extends REST_Controller {
 
-    protected $systeme_table = 'aqi_pp_systeme';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->database();
+        $this->load->model('systeme_model', 'SystemeModel');
 
     }
 
+         /**
+     * Get Systeme 
+     * @method: GET
+     */
     public function index_get($param='')
     {
+        $systeme= array();
 
         if (empty($param)) {
-            $data = $this->db->get($this->systeme_table)->result();
-            if (empty($data)) {
+            
+            foreach ($this->SystemeModel->all_systeme() as $row)
+            {
+                $data['id'] = $row['id'];
+                $data['code'] = $row['code'];
+                $data['libelle'] = $row['libelle'];
+                $data['version'] = $row['version'];
+                $data['type'] = $row['type'];
+                $data['infos'] = $row['infos'];
+                $systeme[] = $data;  
+            }     
+            if (empty($systeme)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=> $this->msg_not_found
@@ -42,17 +56,19 @@ class Systemes extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($systeme, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $this->db->select('*');
-            $this->db->from($this->systeme_table);
-            $this->db->where('id',$param);
-            $this->db->or_where('code',$param);
-            $data = $this->db->get()->row_array();
+            $row = $this->SystemeModel->systeme($param);
+            $systeme['id'] = $row->id;
+            $systeme['code'] = $row->code;
+            $systeme['libelle'] = $row->libelle;
+            $systeme['version'] = $row->version;
+            $systeme['type'] = $row->type;
+            $systeme['infos'] = $row->infos;
 
-            if (empty($data)) {
+            if (empty($systeme)) {
                 $this->set_response([
                     'status'=>false,
                     'message'=>$this->msg_not_found
@@ -60,62 +76,136 @@ class Systemes extends REST_Controller {
                     REST_Controller::HTTP_NOT_FOUND
                 );
             } else {
-                $this->set_response($data, REST_Controller::HTTP_OK);
+                $this->set_response($systeme, REST_Controller::HTTP_OK);
             }
 
         }
-        $this->set_response($data, REST_Controller::HTTP_OK);
+        $this->set_response($systeme, REST_Controller::HTTP_OK);
     }
 
+    /**
+     * Create New Systeme
+     * @method: POST
+     */
     public function index_post()
     {
-        
-        $code = $this->input->post('code');
-        if ($this->valid_code($code)) {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-            $_POST = json_decode(file_get_contents('php://input'),true);
-            $data = $this->input->post();
-            $this->db->insert($this->systeme_table,$data);
-
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_CREATED,
-                'message'=>'systeme créé avec succès.'
-            ],
-            REST_Controller::HTTP_CREATED
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_systeme.code]',
+            array('is_unique'=>'Ce code existe déja !')
         );
 
-        } else {
-            $this->set_response([
-                'status'=>REST_Controller::HTTP_BAD_REQUEST,
-                'message'=>'Ce code existe deja !'
-            ],
-                REST_Controller::HTTP_BAD_REQUEST
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
             );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
 
+            $systeme = $this->input->post();
+            $id = $this->SystemeModel->create($systeme);
+            
+            if ($id>0 AND !empty($id)) {
+               
+                $message = [
+                    'status'=>true,
+                    'message'=>"Système ajouté avec succes!"
+                ];
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            } 
         }
     }
 
-    public function index_put($id)
+    /**
+     * Update Systeme
+     * @method: PUT
+     */
+    public function index_put()
     {
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
-        $_POST = json_decode(file_get_contents('php://input'),true);
-        $data = $this->put();
-        $this->db->update($this->systeme_table, $data, array('id'=>$id));
+        $this->form_validation->set_rules('id', 'Systeme ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
 
-        $this->set_response(['systeme modifié avec succès.'], REST_Controller::HTTP_CREATED);
+        if ($this->form_validation->run() == FALSE){
+            $message = array(
+                'status'=>false,
+                'error'=>$this->form_validation->error_array(),
+                'message'=>validation_errors()
+            );
+            $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+        }else{
+            $systeme = $this->input->post();
+            $systeme['id'] = $this->input->post('id',TRUE);
+
+            $outpout = $this->SystemeModel->update($systeme);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Systeme Modifié avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_CREATED);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
 
+    /**
+     * Delete Systeme
+     * @method: DELETE
+     */
     public function index_delete($id)
     {
-        $this->db->delete($this->systeme_table, array('id'=>$id));
+        $id = $this->security->xss_clean($id);
 
-        $this->set_response(['systeme supprimée avec succès.'], REST_Controller::HTTP_OK);
+        if (empty($id) AND !is_numeric($id)) {
+            $this->set_response([
+                'status'=>FALSE,
+                'message'=>'Cet id n\'existe'
+            ],
+            REST_Controller::HTTP_NOT_FOUND);
+        } else {
+            $systeme= [
+                'id'=>$id
+            ];
+            $outpout = $this->SystemeModel->delete($systeme);
+            if ($outpout>0 AND !empty($outpout)) {
+                $message = [
+                    'status'=>true,
+                    'message'=>"Système supprimé avec succes!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_OK);
+                
+            } else {
+                $message = [
+                    'status'=>false,
+                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                ];
+
+                $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            }
+        }
     }
-
-    public function valid_code($code)
-    {
-        $qry = $this->db->get_where($this->systeme_table, array('code'=>$code));
-        return ($qry->num_rows() <= 0)? true: false;              
-    }
-
 }
