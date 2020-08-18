@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Villes extends REST_Controller {
+class Villes extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -25,6 +24,7 @@ class Villes extends REST_Controller {
         // Construct the parent class
         parent::__construct();
         $this->load->model('ville_model','VilleModel');
+        $this->load->model('pays_model','PaysModel');
 
     }
 
@@ -35,21 +35,70 @@ class Villes extends REST_Controller {
     public function index_get($param='')
     {
         $ville= array();
-        $this->load->model('pays_model','PaysModel');
 
         if (empty($param)) {
             
             foreach ($this->VilleModel->all_villes() as $row)
             {
-                $data['id'] = $row->id;
-                $data['code'] = $row->code;
-                $data['libelle'] = $row->libelle;
-                $data['pays']=$this->PaysModel->pays($row->id_pays); 
+                $data['id'] = (int)$row->ville_id;
+                $data['code'] = $row->ville_code;
+                $data['libelle'] = $row->ville_libelle;
+                $data['pays']=$this->get_pays($row->id_pays); 
                 $ville[] = $data;  
             }     
             if (empty($ville)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
+                    'message'=> $this->msg_not_found
+                ],
+                    REST_Controller::HTTP_NOT_FOUND
+                );
+                return;
+            } else {
+                $this->set_response($ville, REST_Controller::HTTP_OK);
+            }
+            
+        } else {
+            $row = $this->VilleModel->ville($param);
+
+            if (empty($row)) {
+                $this->set_response([
+                    'status'=>404,
+                    'message'=>$this->msg_not_found
+                ],
+                    REST_Controller::HTTP_NOT_FOUND
+                );
+                return;
+            } else {
+                $ville['id'] = (int)$row->ville_id;
+                $ville['code'] = $row->ville_code;
+                $ville['libelle'] = $row->ville_libelle;
+                $ville['pays']=$this->get_pays($row->id_pays);
+                $this->set_response($ville, REST_Controller::HTTP_OK);
+            }
+
+        }
+        $this->set_response(['status'=>200,'message'=>'Succès','data'=>$ville], REST_Controller::HTTP_OK);
+    }
+
+    /**
+     * Get ville joined Pays
+     * @method: GET
+     */
+    public function ville_get($param='')
+    {
+        $ville= array();
+
+        if (empty($param)) {
+            
+            foreach ($this->VilleModel->all_ville_pays() as $row)
+            {
+                $data = $row;
+                $ville[] = $data;  
+            }     
+            if (empty($ville)) {
+                $this->set_response([
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
@@ -59,20 +108,18 @@ class Villes extends REST_Controller {
             }
             
         } else {
-            $row = $this->VilleModel->ville($param);
-            $ville['id'] = $row->id;
-            $ville['code'] = $row->code;
-            $ville['libelle'] = $row->libelle;
-            $ville['pays']=$this->PaysModel->pays($row->id_pays);
-
-            if (empty($ville)) {
+            $row = $this->VilleModel->ville_pays($param);
+            
+            if (empty($row)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
+                $ville = $row;
                 $this->set_response($ville, REST_Controller::HTTP_OK);
             }
 
@@ -86,16 +133,18 @@ class Villes extends REST_Controller {
      */
     public function index_post()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean($_POST);
 
-        $this->form_validation->set_rules('libelle', 'libelle', 'trim|required');
-        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_ville.code]',
+        $this->form_validation->set_rules('ville_libelle', 'Ville Libelle', 'trim|required');
+        $this->form_validation->set_rules('id_pays', 'Pays ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('ville_code', 'Ville Code', 'trim|required|is_unique[aqi_pp_ville.ville_code]',
             array('is_unique'=>'Ce code de ville existe déja !')
         );
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
@@ -108,14 +157,15 @@ class Villes extends REST_Controller {
             if ($id>0 AND !empty($id)) {
                
                 $message = [
-                    'status'=>true,
-                    'message'=>"Ville ajoutée avec succes!"
+                    'status'=>201,
+                    'message'=>"Ville ajoutée avec succes!",
+                    'response'=>base_url().'/'.$id
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
                 $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
@@ -129,28 +179,30 @@ class Villes extends REST_Controller {
      */
     public function index_put()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'Ville ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('code', 'Code', 'trim|required');
-        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('ville_id', 'Ville ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('ville_code', 'Ville Code', 'trim|required');
+        $this->form_validation->set_rules('id_pays', 'Pays ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('ville_libelle', 'Ville Libelle', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
             $ville = $this->input->post();
-            $ville['id'] = $this->input->post('id',TRUE);
+            $ville['ville_id'] = $this->input->post('ville_id',TRUE);
 
             $outpout = $this->VilleModel->update($ville);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>201,
                     'message'=>"Ville Modifiée avec succes!"
                 ];
 
@@ -158,7 +210,7 @@ class Villes extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -173,22 +225,23 @@ class Villes extends REST_Controller {
      */
     public function index_delete($id)
     {
+        $this->auth();
         $id = $this->security->xss_clean($id);
 
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
-                'status'=>FALSE,
+                'status'=>404,
                 'message'=>'L\'Id de la ville n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
         } else {
             $ville= [
-                'id'=>$id
+                'ville_id'=>$id
             ];
             $outpout = $this->VilleModel->delete($ville);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>200,
                     'message'=>"Ville supprimée avec succes!"
                 ];
 
@@ -196,13 +249,22 @@ class Villes extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
             }
         }
+    }
+
+    public function get_pays($id){
+        $row = $this->PaysModel->pays($id);
+        $pays['id'] = (int)$row->pays_id;
+        $pays['code'] = $row->pays_code;
+        $pays['libelle'] = $row->pays_libelle;
+
+        return $pays;
     }
 
 }

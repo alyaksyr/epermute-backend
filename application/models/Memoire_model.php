@@ -8,7 +8,7 @@ class Memoire_Model extends CI_Model
 
     public function memoire($id)
     {
-        $qry= $this->db->get_where($this->memoire_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->memoire_table,array('memoire_id'=>$id));
         return $qry->row();        
     }
 
@@ -25,9 +25,9 @@ class Memoire_Model extends CI_Model
     public function memoires($ids)
     {
         $ids = json_decode($ids); 
-        $this->db->select('type,unite,capacite');
+        $this->db->select('memoire_type,memoire_unite,memoire_capacite');
         $this->db->from($this->memoire_table);
-        $this->db->where_in('id',$ids);
+        $this->db->where_in('memoire_id',$ids);
         $qry = $this->db->get();
         return $qry->result_array();     
     }
@@ -44,10 +44,10 @@ class Memoire_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->memoire_table, array('id'=>$data['id']));
+        $query = $this->db->get_where($this->memoire_table, array('memoire_id'=>$data['memoire_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->memoire_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->memoire_table,$data,['memoire_id'=>$query->row('memoire_id')]);
         } 
         return false;
     }

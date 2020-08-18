@@ -23,7 +23,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.
 |
 */
-$config['base_url'] = 'http://localhost/phoneplus/api/';
+// $config['base_url'] = 'http://localhost/phoneplus/api/';
+$config['base_url']	= "http://".$_SERVER['HTTP_HOST'];
+$config['base_url'] .= preg_replace('@/+$@','',dirname($_SERVER['SCRIPT_NAME'])).'/'; 
 
 /*
 |--------------------------------------------------------------------------
@@ -525,3 +527,9 @@ $config['proxy_ips'] = '';
 // example for my paypal testing: 
 $config['PHONEPLUS_jwt_key']='@AQIPPKOLOKALYSCHRIST_2019';
 $config['token_timeout'] = 10;
+
+//Email Preference
+// $config['protocol'] = 'smtp';
+// $config['mailpath'] = '/usr/sbin/sendmail';
+// $config['charset'] = 'iso-8859-1';
+// $config['wordwrap'] = TRUE;

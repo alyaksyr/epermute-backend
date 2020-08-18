@@ -8,7 +8,7 @@ class Categorie_Model extends CI_Model
 
     public function categorie($id)
     {
-        $qry = $this->db->get_where($this->categorie_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->categorie_table,array('cat_id'=>$id));
         return $qry->row();        
     }
 
@@ -26,10 +26,10 @@ class Categorie_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->categorie_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->categorie_table,array('cat_id'=>$data['cat_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->categorie_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->categorie_table,$data,['cat_id'=>$query->row('cat_id')]);
         } 
         return false;
     }
@@ -53,9 +53,9 @@ class Categorie_Model extends CI_Model
      */
     public function categorie_libelle($id)
     {
-        $this->db->select('id,libelle');
+        $this->db->select('cat_id id,cat_libelle name, cat_image image, cat_slug slug');
         $this->db->from($this->categorie_table);
-        $this->db->where('id',$id);
+        $this->db->where('cat_id',$id);
         $qry = $this->db->get();
         return $qry->row();       
     }

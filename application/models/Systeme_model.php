@@ -8,7 +8,7 @@ class Systeme_Model extends CI_Model
 
     public function systeme($id)
     {
-        $qry = $this->db->get_where($this->systeme_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->systeme_table,array('systeme_id'=>$id));
         return $qry->row();        
     }
 
@@ -26,10 +26,10 @@ class Systeme_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->systeme_table, array('id'=>$data['id']));
+        $query = $this->db->get_where($this->systeme_table, array('systeme_id'=>$data['systeme_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->systeme_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->systeme_table,$data,['systeme_id'=>$query->row('systeme_id')]);
         } 
         return false;
     }

@@ -8,7 +8,7 @@ class Reseau_Model extends CI_Model
 
     public function reseau($id)
     {
-        $qry= $this->db->get_where($this->reseau_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->reseau_table,array('reseau_id'=>$id));
         return $qry->row();        
     }
 
@@ -25,9 +25,9 @@ class Reseau_Model extends CI_Model
     public function reseaux($ids)
     {
         $ids = json_decode($ids); 
-        $this->db->select('libelle');
+        $this->db->select('reseau_libelle');
         $this->db->from($this->reseau_table);
-        $this->db->where_in('id',$ids);
+        $this->db->where_in('reseau_id',$ids);
         $qry = $this->db->get();
         return $qry->result_array();     
     }
@@ -44,10 +44,10 @@ class Reseau_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->reseau_table, array('id'=>$data['id']));
+        $query = $this->db->get_where($this->reseau_table, array('reseau_id'=>$data['reseau_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->reseau_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->reseau_table,$data,['reseau_id'=>$query->row('reseau_id')]);
         } 
         return false;
     }

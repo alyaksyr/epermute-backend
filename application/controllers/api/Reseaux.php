@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Reseaux extends REST_Controller {
+class Reseaux extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -35,48 +34,47 @@ class Reseaux extends REST_Controller {
     public function index_get($param='')
     {
         $reseau= array();
+        $msg='';
 
         if (empty($param)) {
             
             foreach ($this->ReseauModel->all_reseau() as $row)
             {
-                $data['id'] = $row['id'];
-                $data['code'] = $row['code'];
-                $data['libelle'] = $row['libelle'];
-                $data['infos'] = $row['infos'];
+                $data = $row;
                 $reseau[] = $data;  
             }     
             if (empty($reseau)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
                 $this->set_response($reseau, REST_Controller::HTTP_OK);
+                $msg = 'Liste des reseaux récupérée avec succès !';
             }
             
         } else {
             $row = $this->ReseauModel->reseau($param);
-            $reseau['id'] = $row->id;
-            $reseau['code'] = $row->code;
-            $reseau['libelle'] = $row->libelle;
-            $reseau['infos'] = $row->infos;
-
-            if (empty($reseau)) {
+            
+            if (empty($row)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
+                $reseau = $row;
                 $this->set_response($reseau, REST_Controller::HTTP_OK);
+                $msg = 'Reseau récupérée avec succès !';
             }
 
         }
-        $this->set_response($reseau, REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$reseau], REST_Controller::HTTP_OK);
     }
 
     /**
@@ -85,21 +83,23 @@ class Reseaux extends REST_Controller {
      */
     public function index_post()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
-        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_reseau.code]',
+        $this->form_validation->set_rules('reseau_libelle', 'Reseau Libelle', 'trim|required');
+        $this->form_validation->set_rules('reseau_code', 'Reseau Code', 'trim|required|is_unique[aqi_pp_reseau.code]',
             array('is_unique'=>'Ce code existe déja !')
         );
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            return;
         }else{
 
             $reseau = $this->input->post();
@@ -108,14 +108,15 @@ class Reseaux extends REST_Controller {
             if ($id>0 AND !empty($id)) {
                
                 $message = [
-                    'status'=>true,
-                    'message'=>"Reseau ajouté avec succes!"
+                    'status'=>201,
+                    'message'=>"Reseau ajouté avec succes!",
+                    'response'=>base_url().'/'.$id
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
                 $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
@@ -129,28 +130,30 @@ class Reseaux extends REST_Controller {
      */
     public function index_put()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'Reseau ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('code', 'Code', 'trim|required');
-        $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('reseau_id', 'Reseau ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('reseau_code', 'Reseau Code', 'trim|required');
+        $this->form_validation->set_rules('reseau_libelle', 'Reseau Libelle', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            return;
         }else{
             $reseau = $this->input->post();
-            $reseau['id'] = $this->input->post('id',TRUE);
+            $reseau['reseau_id'] = $this->input->post('reseau_id',TRUE);
 
             $outpout = $this->ReseauModel->update($reseau);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>201,
                     'message'=>"Reseau Modifié avec succes!"
                 ];
 
@@ -158,7 +161,7 @@ class Reseaux extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -173,22 +176,24 @@ class Reseaux extends REST_Controller {
      */
     public function index_delete($id)
     {
+        $this->auth();
         $id = $this->security->xss_clean($id);
 
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
-                'status'=>FALSE,
+                'status'=>404,
                 'message'=>'Cet id n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
+            return;
         } else {
             $reseau= [
-                'id'=>$id
+                'reseau_id'=>$id
             ];
             $outpout = $this->ReseauModel->delete($reseau);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>200,
                     'message'=>"Reseau supprimé avec succes!"
                 ];
 
@@ -196,7 +201,7 @@ class Reseaux extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 

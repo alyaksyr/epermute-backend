@@ -8,13 +8,13 @@ class Article_Model extends CI_Model
 
     public function article($id)
     {
-        $qry= $this->db->get_where($this->article_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->article_table,array('art_id'=>$id));
         return $qry->row();       
     }
 
     public function article_by_code($code)
     {
-        $qry= $this->db->get_where($this->article_table,array('code'=>$code));
+        $qry= $this->db->get_where($this->article_table,array('art_code'=>$code));
         return $qry->row();       
     }
 
@@ -32,10 +32,10 @@ class Article_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->article_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->article_table,array('art_id'=>$data['art_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->article_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->article_table,$data,['art_id'=>$query->row('art_id')]);
         } 
         return false;
     }
@@ -51,9 +51,29 @@ class Article_Model extends CI_Model
             return false;
         } 
         return false;
+    }    
+
+   /**
+     * Get minimum infos article
+     * @param: {Id, code}
+    */
+    public function get_article($param = '')
+    {
+        $select = 'art_id id, art_code code,art_libelle name,art_fabricant fabricant,art_prix default_price,';
+        $select .='art_slug slug,art_image image, art_qte_package quantity,';
+        $select .='art_id_categorie categorie, art_id_sous_categorie sous_categorie, art_id_marque marque';
+        $this->db->select($select);
+        $this->db->from($this->article_table);
+        if ($param === '') {
+            return $this->db->get()->result();
+        }
+
+        $this->db->where('art_id',$param);
+        $this->db->or_where('art_code',$param);
+        return $this->db->get()->row();
     }
 
-    /**
+        /**
      * Get all infos article
      * @param: {Id, code}
     */
@@ -61,9 +81,9 @@ class Article_Model extends CI_Model
     {
         $this->db->select('*');
         $this->db->from($this->article_table);
-        $this->db->join('aqi_pp_article_meta', 'aqi_pp_article_meta.id_article = aqi_pp_article.id');
-        $this->db->where('aqi_pp_article.id',$param);
-        $this->db->or_where('aqi_pp_article.code',$param);
+        $this->db->join('aqi_pp_article_meta', 'aqi_pp_article_meta.id_article = aqi_pp_article.art_id');
+        $this->db->where('aqi_pp_article.art_id',$param);
+        $this->db->or_where('aqi_pp_article.art_code',$param);
         $query = $this->db->get();
         return $query->row();
     }

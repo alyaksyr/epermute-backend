@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Etats extends REST_Controller {
+class Etats extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -24,7 +23,7 @@ class Etats extends REST_Controller {
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->model('etatArticle_model','EtatArticleModel');
+        $this->load->model('Etat_model','EtatArticleModel');
 
     }
 
@@ -35,6 +34,7 @@ class Etats extends REST_Controller {
     public function index_get($param='')
     {
         $etat= array();
+        $msg = '';
 
         if (empty($param)) {
             
@@ -47,34 +47,38 @@ class Etats extends REST_Controller {
             }     
             if (empty($etat)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
                 $this->set_response($etat, REST_Controller::HTTP_OK);
+                $msg = 'Liste des etats d\'article récupérée avec succès!';
             }
             
         } else {
             $row = $this->EtatArticleModel->etat($param);
-            $etat['id'] = $row->id;
-            $etat['code'] = $row->code;
-            $etat['libelle'] = $row->libelle;
-
-            if (empty($etat)) {
+            
+            if (empty($row)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
+                $etat['id'] = $row->id;
+                $etat['code'] = $row->code;
+                $etat['libelle'] = $row->libelle;
                 $this->set_response($etat, REST_Controller::HTTP_OK);
+                $msg = 'Etat d\'article récupéré avec succès!';
             }
 
         }
-        $this->set_response($etat, REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$etat], REST_Controller::HTTP_OK);
     }
 
     /**
@@ -83,7 +87,9 @@ class Etats extends REST_Controller {
      */
     public function index_post()
     {
-        $_POST = $this->security->xss_clean($_POST);
+        $this->auth();
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
         $this->form_validation->set_rules('libelle', 'Libelle', 'trim|required');
         $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_etat_article.code]',
@@ -126,6 +132,7 @@ class Etats extends REST_Controller {
      */
     public function index_put()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
@@ -170,6 +177,7 @@ class Etats extends REST_Controller {
      */
     public function index_delete($id)
     {
+        $this->auth();
         $id = $this->security->xss_clean($id);
 
         if (empty($id) AND !is_numeric($id)) {

@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Roles extends REST_Controller {
+class Roles extends MY_Controller {
 
     protected $role_table = 'aqi_pp_role';
     public $msg_not_found = 'Aucun enregitrement trouvé !';

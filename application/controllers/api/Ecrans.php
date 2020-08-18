@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Ecrans extends REST_Controller {
+class Ecrans extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -36,46 +35,45 @@ class Ecrans extends REST_Controller {
     {
         if (empty($param)) {
             $ecran= array();
+            $msg='';
+
             foreach ($this->EcranModel->all_ecran() as $row)
             {
-                $data['id'] = $row['id'];
-                $data['code'] = $row['code'];
-                $data['taille'] = $row['taille'].' '.$row['unite'];
-                $data['infos'] = $row['infos'];
+                $data = $row;
                 $ecran[] = $data;  
             }     
             if (empty($ecran)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
                 $this->set_response($ecran, REST_Controller::HTTP_OK);
+                $msg='Liste des ecrans récupérée avec succès !';
             }
             
         } else {
             $row = $this->EcranModel->ecran($param);
-            $ecran['id'] = $row->id;
-            $ecran['code'] = $row->code;
-            $ecran['taille'] = $row->taille;
-            $ecran['unite'] = $row->unite;
-            $ecran['infos'] = $row->infos;
 
-            if (empty($ecran)) {
+            if (empty($row)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
+                $ecran = $row;
                 $this->set_response($ecran, REST_Controller::HTTP_OK);
+                $msg='Ecran récupérée avec succès !';
             }
 
         }
-        $this->set_response($ecran, REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$ecran], REST_Controller::HTTP_OK);
     }
 
     /**
@@ -84,17 +82,18 @@ class Ecrans extends REST_Controller {
      */
     public function index_post()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('code', 'Code', 'trim|required|is_unique[aqi_pp_ecran.code]',
+        $this->form_validation->set_rules('ecran_code', 'Code', 'trim|required|is_unique[aqi_pp_ecran.ecran_code]',
             array('is_unique'=>'Ce code existe déja !')
         );
-        $this->form_validation->set_rules('taille', 'Taille', 'trim|required|numeric');
+        $this->form_validation->set_rules('ecran_taille', 'Taille', 'trim|required|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
@@ -107,14 +106,15 @@ class Ecrans extends REST_Controller {
             if ($id>0 AND !empty($id)) {
                
                 $message = [
-                    'status'=>true,
-                    'message'=>"Ecran ajouté avec succes!"
+                    'status'=>201,
+                    'message'=>"Ecran ajouté avec succes!",
+                    'response'=>base_url().'/'.$id
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
                 $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
@@ -128,28 +128,29 @@ class Ecrans extends REST_Controller {
      */
     public function index_put()
     {
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'Ecran ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('code', 'Code', 'trim|required');
-        $this->form_validation->set_rules('taille', 'Taille', 'trim|required|numeric');
+        $this->form_validation->set_rules('ecran_id', 'Ecran ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('ecran_code', 'Code', 'trim|required');
+        $this->form_validation->set_rules('ecran_taille', 'Taille', 'trim|required|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
             $ecran = $this->input->post();
-            $ecran['id'] = $this->input->post('id',TRUE);
+            $ecran['ecran_id'] = $this->input->post('ecran_id',TRUE);
 
             $outpout = $this->EcranModel->update($ecran);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>201,
                     'message'=>"Ecran Modifié avec succes!"
                 ];
 
@@ -157,7 +158,7 @@ class Ecrans extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -172,22 +173,23 @@ class Ecrans extends REST_Controller {
      */
     public function index_delete($id)
     {
+        $this->auth();
         $id = $this->security->xss_clean($id);
 
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
-                'status'=>FALSE,
+                'status'=>404,
                 'message'=>'Cet Id n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
         } else {
             $ecran= [
-                'id'=>$id
+                'ecran_id'=>$id
             ];
             $outpout = $this->EcranModel->delete($ecran);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>200,
                     'message'=>"Ecran supprimée avec succes!"
                 ];
 
@@ -195,7 +197,7 @@ class Ecrans extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 

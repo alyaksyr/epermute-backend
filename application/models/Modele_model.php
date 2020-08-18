@@ -8,7 +8,7 @@ class Modele_Model extends CI_Model
 
     public function modele($id)
     {
-        $qry= $this->db->get_where($this->modele_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->modele_table,array('modele_id'=>$id));
         return $qry->row();        
     }
 
@@ -26,10 +26,10 @@ class Modele_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->modele_table, array('id'=>$data['id']));
+        $query = $this->db->get_where($this->modele_table, array('modele_id'=>$data['modele_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->modele_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->modele_table,$data,['modele_id'=>$query->row('modele_id')]);
         } 
         return false;
     }

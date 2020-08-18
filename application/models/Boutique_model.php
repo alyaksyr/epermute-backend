@@ -5,6 +5,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Boutique_Model extends CI_Model
 {
     protected $boutique_table = 'aqi_pp_boutique';
+    protected $select = '
+    bqe_id id,
+    bqe_code code,
+    bqe_raison_social name,
+	bqe_mobile mobile,
+	bqe_telephone telephone,
+	bqe_id_pays pays,
+    bqe_id_ville ville,
+    bqe_quartier quartier,
+	bqe_boite_postale boite_postale,
+    bqe_situation addresse,
+    bqe_id_admin admin,
+	bqe_sigle sigle,
+    bqe_logo logo,
+	bqe_slug slug,
+	bqe_site_web site_web,
+	bqe_email email,
+	bqe_latitude latitude,
+	bqe_longitude longititude';
 
 
     /**
@@ -13,7 +32,7 @@ class Boutique_Model extends CI_Model
      */
     public function boutique($id)
     {
-        $qry= $this->db->get_where($this->boutique_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->boutique_table,array('bqe_id'=>$id));
         return $qry->row();
     }
 
@@ -27,6 +46,25 @@ class Boutique_Model extends CI_Model
         return $query->result_array();
     }
 
+    /**
+     * Get Boutiques with essantial informations
+     * @method: GET
+     * @param: User Id
+     */
+    public function get_boutique($param='')
+    {
+        $this->db->select($this->select);
+        $this->db->from($this->boutique_table);
+        if ($param === '') {
+            return $this->db->get()->result();
+        } else {
+            $this->db->where('bqe_id',$param);
+            $this->db->or_where('bqe_slug',$param);
+            return $this->db->get()->row();
+        }
+        
+             
+    }
     /**
      * Add new Boutique
      * @param: {Array} Boutique data
@@ -46,10 +84,10 @@ class Boutique_Model extends CI_Model
      */
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->boutique_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->boutique_table,array('bqe_id'=>$data['bqe_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->boutique_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->boutique_table,$data,['bqe_id'=>$query->row('bqe_id')]);
         } 
         return false;
     }
@@ -77,13 +115,13 @@ class Boutique_Model extends CI_Model
      * @method: GET
      * @param: User Id
      */
-    public function boutiques_by_admin($str)
+    public function boutiques_by_admin($id)
     {
-        $this->db->select('*');
+        $this->db->select($this->select);
         $this->db->from($this->boutique_table);
-        $this->db->join('aqi_pp_users','aqi_pp_users.id=aqi_pp_boutique.id_admin');
+        $this->db->where('bqe_id_admin',$id);
         $qry = $this->db->get();
-        return $qry->result_array();        
+        return $qry->result();        
     }
 
     /**
@@ -93,11 +131,10 @@ class Boutique_Model extends CI_Model
      */
     public function boutique_by_pays($id)
     {
-        $this->db->select('*');
+        $this->db->select($this->select);
         $this->db->from($this->boutique_table);
-        $this->db->join('aqi_pp_pays','aqi_pp_pays.id=aqi_pp_boutique.id_pays');
         $qry = $this->db->get();
-        return $qry->result_array();  
+        return $qry->result();  
     }
 
     /**
@@ -107,12 +144,12 @@ class Boutique_Model extends CI_Model
      */
     public function boutique_by_ville($id)
     {
-        $this->db->select('*');
+        $this->db->select($this->select);
         $this->db->from($this->boutique_table);
-        $this->db->join('aqi_pp_ville','aqi_pp_ville.id=aqi_pp_boutique.id_ville');;
         $qry = $this->db->get();
-        return $qry->result_array();  
+        return $qry->result();  
     }
     
 }
+
 

@@ -8,7 +8,7 @@ class Marque_Model extends CI_Model
 
     public function marque($id)
     {
-        $qry = $this->db->get_where($this->marque_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->marque_table,array('marque_id'=>$id));
         return $qry->row();
     }
 
@@ -26,10 +26,10 @@ class Marque_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->marque_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->marque_table,array('marque_id'=>$data['marque_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->marque_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->marque_table,$data,['marque_id'=>$query->row('marque_id')]);
         } 
         return false;
     }
@@ -51,12 +51,25 @@ class Marque_Model extends CI_Model
      * Get Mrque libelle
      * @param: id
      */
-    public function marque_libelle($id)
+    public function marque_libelle($param='')
     {
-        $this->db->select('id,libelle');
+        $this->db->select('marque_id id,marque_libelle name, marque_slug slug, marque_image image');
         $this->db->from($this->marque_table);
-        $this->db->where('id',$id);
-        $qry = $this->db->get();
-        return $qry->row();       
+        if ($param ==='') {
+            return $this->db->get()->result();
+        } else {
+            $this->db->where('marque_id',$param);
+            $this->db->or_where('marque_slug',$param);
+            return $this->db->get()->row();
+        }
+               
+    }
+
+    public function marque_modele($id){
+        $this->db->select('modele_id,modele_code,modele_libelle,modele_infos,ma.*');
+        $this->db->from('aqi_pp_modele as mo');
+        $this->db->join('aqi_pp_marque as ma','mo.id_marque = ma.marque_id','left');
+        $this->db->where(array('mo.modele_id'=>$id));
+        return $this->db->get()->row();
     }
 }

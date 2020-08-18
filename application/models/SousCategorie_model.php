@@ -8,7 +8,7 @@ class SousCategorie_Model extends CI_Model
 
     public function sous_categorie($id)
     {
-        $qry = $this->db->get_where($this->sous_categorie_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->sous_categorie_table,array('scat_id'=>$id));
         return $qry->row();        
     }
 
@@ -26,10 +26,10 @@ class SousCategorie_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->sous_categorie_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->sous_categorie_table,array('scat_id'=>$data['scat_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->sous_categorie_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->sous_categorie_table,$data,['scat_id'=>$query->row('scat_id')]);
         } 
         return false;
     }
@@ -46,6 +46,15 @@ class SousCategorie_Model extends CI_Model
         } 
         return false;
 
+    }
+
+    public function sous_categorie_site($id)
+    {
+        $this->db->select('scat_id id,scat_libelle name,scat_slug slug,scat_image image');
+        $this->db->from($this->sous_categorie_table);
+        $this->db->where('scat_id', $id);
+        $qry = $this->db->get();
+        return $qry->row();        
     }
     
 }

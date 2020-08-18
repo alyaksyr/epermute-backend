@@ -3,8 +3,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH . 'libraries/REST_Controller.php';
-require_once APPPATH . 'libraries/JWT.php';
 require APPPATH . 'libraries/Format.php';
 
 /**
@@ -18,12 +16,13 @@ require APPPATH . 'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Users extends REST_Controller {
+class Users extends MY_Controller {
 
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
+        $this->auth();
         $this->load->model('user_model','UserModel');
 
     }
@@ -63,6 +62,8 @@ class Users extends REST_Controller {
         }
         $this->set_response($data, REST_Controller::HTTP_OK);
     }
+
+
     /**
      * Create new user
      * @method:POST
@@ -70,8 +71,9 @@ class Users extends REST_Controller {
     
     public function register_post()
     {
-       
-        $_POST = $this->security->xss_clean($_POST);
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
+        // $_POST = $this->security->xss_clean($_POST);
 
         $this->form_validation->set_rules('password', 'Password', 'trim|required');
         $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required|is_unique[aqi_pp_users.mobile]',
@@ -81,13 +83,13 @@ class Users extends REST_Controller {
             array('is_unique'=>'Cet email existe déja !')
         );
         $this->form_validation->set_rules('login', 'Login', 'trim|is_unique[aqi_pp_users.login]',
-            array('is_unique'=>'Cet Login existe déja !')
+            array('is_unique'=>'Ce Login existe déja !')
         );
 
        if ($this->form_validation->run() == FALSE)
        {
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
@@ -104,7 +106,7 @@ class Users extends REST_Controller {
            $outpout = $this->UserModel->insert_user($data);
            if ($outpout>0 AND !empty($outpout)) {
                $message = [
-                   'status'=>true,
+                   'status'=>201,
                    'message'=>"Utilisateur créé avec succes!"
                ];
 
@@ -112,7 +114,7 @@ class Users extends REST_Controller {
                
            } else {
             $message = [
-                'status'=>false,
+                'status'=>400,
                 'message'=>"Une erreur est survenue lors de l'enregistrement!"
             ];
 
@@ -129,7 +131,9 @@ class Users extends REST_Controller {
     public function login_post()
     {
         $key = $this->config->item('PHONEPLUS_jwt_key');
-        $_POST = $this->security->xss_clean($_POST);
+        // $_POST = $this->security->xss_clean($_POST);
+        $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
+        $this->form_validation->set_data($_POST);
 
         $this->form_validation->set_rules('password', 'Password', 'trim|required');
         $this->form_validation->set_rules('login', 'Login', 'trim|required');
@@ -137,18 +141,17 @@ class Users extends REST_Controller {
        if ($this->form_validation->run() == FALSE)
        {
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
-        } else
-        {
-    
+        } else{
             $outpout = $this->UserModel->user_login($this->input->post('login'),$this->encrypt_pwd($this->input->post('password')));
             if (!empty($outpout) AND $outpout != FALSE) {
                 $token = array();
                 $date = new DateTime();
+                $token['id'] = $outpout->id;
 				$token['email'] = $outpout->email;
                 $token['nickname'] = $outpout->nickname;                
                 $token['image'] = $outpout->photo;
@@ -159,18 +162,18 @@ class Users extends REST_Controller {
                 $token['sub'] = $outpout->id;
 
                 $user_data = [
-                    'id'=>$outpout->id,
                     'code'=>$outpout->code,
                     'nom'=>$outpout->nom,
                     'prenom'=>$outpout->prenom,
                     'image'=>$outpout->photo,
                     'url'=>base_url(),
+                    'role'=>$outpout->role
                 ];
                 
                 $user_data['token'] = JWT::encode($token,$key);
 
                 $message = [
-                    'status'=>true,
+                    'status'=>200,
                     'data'=>$user_data,
                     'message'=>"Authentification réuissie"
                 ];
@@ -179,7 +182,7 @@ class Users extends REST_Controller {
         
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'authentification !"
                 ];
 
@@ -198,4 +201,18 @@ class Users extends REST_Controller {
 		return $pass;
 	}
     
+    /**
+     * Confirm User
+     * @method: GET
+     */
+
+    public function confirm_get($user, $key)
+    {
+        $outpout = $this->UserModel->user_check($user, $key);
+        var_dump($outpout);
+    }
+    
+    public function upload_image(){
+        
+    }
 }

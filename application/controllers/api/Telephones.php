@@ -2,7 +2,6 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Telephones extends REST_Controller {
+class Telephones extends MY_Controller {
 
     protected $telephone_table = 'aqi_pp_telephone';
     public $msg_not_found = 'Aucun enregitrement trouvé !';
@@ -79,6 +78,7 @@ class Telephones extends REST_Controller {
 
     public function index_post()
     {
+        $this->auth();
         $_POST = json_decode(file_get_contents('php://input'),true);
         $data = $this->input->post();
         $resp = $this->telephone_model->create_telephone($data);
@@ -107,9 +107,10 @@ class Telephones extends REST_Controller {
 
     public function index_put()
     {
-
+        $this->auth();
         $_POST = json_decode(file_get_contents('php://input'),true);
         $data = $this->put();
+
         $id = $data['id_article'];
         $this->db->update($this->telephone_table, $data, array('id_article'=>$id));
 

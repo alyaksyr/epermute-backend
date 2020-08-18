@@ -1,8 +1,6 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
 
 use Phoneplus\Libraries\REST_Controller;
-require APPPATH .'libraries/REST_Controller.php';
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -16,7 +14,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Produits extends REST_Controller {
+class Produits extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -30,79 +28,118 @@ class Produits extends REST_Controller {
         $this->load->model('Categorie_model','CategorieModel');
         $this->load->model('articleMeta_model','ArticleMetaModel');
         $this->load->model('marque_model','MarqueModel');
+        $this->load->model('TrocMeta_model','TrocMetaModel');
+        $this->load->model('boutique_model','BoutiqueModel');
+        $this->load->model('Comment_model','CommentModel');
 
     }
 
     /**
-    * Get article
+    * Get produits
     * @method: GET
     * @param: {Id}
     */
     public function index_get($param='')
     {
         $produit = array();
+        $msg='';
 
         if (empty($param)) {
             
-            foreach ($this->ProduitModel->all_produit() as $row)
-            {
-                $data['id'] = $row->id;
-                $data['added'] = $row->added;
-                $data['modified'] = $row->modified;
-                $data['disponible'] = $row->is_dispo;
-                $data['trocable'] = $row->is_troc;
-                $data['status'] = $row->status;
-                $data['boutique'] = $row->id_boutique;
-                $data['quantite'] = $row->quantite;
-                $data['quantite_alerte'] = $row->qte_alert;
-                $data['prix'] = $row->prix;
-                $data['images'] = $row->images;
-                $data['couleur'] = $row->couleur;
-                $data['article'] = $this->get_detail_article($row->id);
-
-                $produit[] = $data;  
-            }     
+            $produit = $this->ProduitModel->all_produit();
+     
             if (empty($produit)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
                 $this->set_response($produit, REST_Controller::HTTP_OK);
+                $msg = 'Liste des produits récupérée avec succès !';
             }
             
         } else {
-            $row = $this->ProduitModel->produit($param);
-            $produit['id'] = $row->id;
-            $produit['added'] = $row->added;
-            $produit['modified'] = $row->modified;
-            $produit['disponible'] = $row->is_dispo;
-            $produit['trocable'] = $row->is_troc;
-            $produit['status'] = $row->status;
-            $produit['boutique'] = $row->id_boutique;
-            $produit['quantite'] = $row->quantite;
-            $produit['quantite_alerte'] = $row->qte_alert;
-            $produit['prix'] = $row->prix;
-            $produit['images'] = $row->images;
-            $produit['couleur'] = $row->couleur;
-            $produit['article'] = $this->get_detail_article($row->id);
-            
+            $row = $this->ProduitModel->produit($param);            
 
-            if (empty($produit)) {
+            if (empty($row)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
+                return;
             } else {
+                $produit = $row;
                 $this->set_response($produit, REST_Controller::HTTP_OK);
+                $msg = 'Produit récupéré avec succès !';
             }
 
         }
-        $this->set_response($produit, REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$produit], REST_Controller::HTTP_OK);
+    }
+
+    /**
+    * Liste produit  pour le site
+    * @method: GET
+    */
+    public function list_products_get($param='')
+    {
+        $produit = array();
+        $msg='';
+        /**Verifie si le parametres n'existe pas */
+        if (empty($param)) {
+            foreach ($this->ProduitModel->get_products() as $row)
+            {
+                $images = $this->split_image($row->images);
+                $images[] = $row->image;
+                $row->images = $images;
+                $row->rate = $this->CommentModel->get_avg_comment($row->id);
+                $row->rating = $this->CommentModel->get_comment($row->id);
+                $row->article = $this->get_detail_article((int)$row->article);
+                $row->boutique = $this->BoutiqueModel->get_boutique($row->boutique);
+                $produit[]= $row;
+            }
+            if (empty($produit)) {
+                $this->set_response([
+                    'status'=>404,
+                    'message'=> $this->msg_not_found
+                ],
+                    REST_Controller::HTTP_NOT_FOUND
+                );
+                return;
+            } else {
+                $this->set_response($produit, REST_Controller::HTTP_OK);
+                $msg = 'Liste des produits récupérée avec succès !';
+            }
+        }else{
+            $row = $this->ProduitModel->get_products($param);
+            if (empty($row)) {
+                $this->set_response([
+                    'status'=>404,
+                    'message'=>$this->msg_not_found
+                ],
+                    REST_Controller::HTTP_NOT_FOUND
+                );
+                return;
+            } else {
+                $images = $this->split_image($row->images);
+                $images[] = $row->image;
+                $row->images = $images;
+                $row->rate = $this->CommentModel->get_avg_comment($row->id);
+                $row->rating = $this->CommentModel->get_comment($row->id);
+                $row->article = $this->get_detail_article((int)$row->article);
+                $row->boutique = $this->BoutiqueModel->get_boutique($row->boutique);
+                $produit = $row;
+                $this->set_response($produit, REST_Controller::HTTP_OK);
+                $msg = 'Produit récupéré avec succès !';
+            }
+        }
+        
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$produit], REST_Controller::HTTP_OK);
     }
 
     /**
@@ -111,38 +148,41 @@ class Produits extends REST_Controller {
      */
     public function index_post()
     {
+        $this->auth();
+        $date = new DateTime();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('raison_social', 'RaisonSocial', 'trim|required');
-        $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required');
-        $this->form_validation->set_rules('description', 'Description', 'trim|required');
+        $this->form_validation->set_rules('produit_prix', 'Prix', 'trim|required|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
             $data = $this->input->post();
-            $data['modified'] = date('Y-m-d\TH:i:s.u');
-            $data['created'] = date('Y-m-d\TH:i:s.u');
-            $data['code'] = time();
+            $photo = $this->upload_image($this->input->post('images'));
+            $data['produit_main_image'] = $photo;
+            $data['produit_code'] = $date->getTimestamp();
+            $data['produit_modified'] = date('Y-m-d\TH:i:s.u');
+            $data['produit_added'] = date('Y-m-d\TH:i:s.u');
 
             $outpout = $this->ProduitModel->create($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
-                    'message'=>"produit ajoutée avec succes!"
+                    'status'=>201,
+                    'message'=>"produit ajoutée avec succes!",
+                    'response'=>base_url().'/'.$outpout
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -157,22 +197,24 @@ class Produits extends REST_Controller {
      */
     public function index_delete($id)
     {
+        $this->auth();
         $id = $this->security->xss_clean($id);
 
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
-                'status'=>FALSE,
+                'status'=>404,
                 'message'=>'L\'Id de la produit n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
+            return;
         } else {
             $produit= [
-                'id'=>$id
+                'produit_id'=>$id
             ];
             $outpout = $this->ProduitModel->delete($produit);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>200,
                     'message'=>"produit supprimée avec succes!"
                 ];
 
@@ -180,7 +222,7 @@ class Produits extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -196,30 +238,33 @@ class Produits extends REST_Controller {
      */
 
     public function index_put(){
+        $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'produit ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('raison_social', 'RaisonSocial', 'trim|required');
-        $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required');
-        $this->form_validation->set_rules('description', 'Description', 'trim|required');
+        $this->form_validation->set_rules('produit_id', 'produit ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('produit_prix', 'Prix Produit', 'trim|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
-                'status'=>false,
+                'status'=>400,
                 'error'=>$this->form_validation->error_array(),
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
+            return;
         }else{
             $data = $this->input->post();
-            $data['id'] = $this->input->post('id',TRUE);
-            $data['modified'] = date('Y-m-d\TH:i:s.u');
+            $photo = $this->upload_images($this->input->post('images'),'1595258896','phoneplus');
+            $data['produit_images'] = $photo;
+            $data['produit_prix'] = $this->input->post('prix',TRUE);
+            $data['produit_id'] = $this->input->post('id',TRUE);
+            $data['produit_modified'] = date('Y-m-d\TH:i:s.u');
 
             $outpout = $this->ProduitModel->update($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
-                    'status'=>true,
+                    'status'=>201,
                     'message'=>"produit Modifiée avec succes!"
                 ];
 
@@ -227,7 +272,7 @@ class Produits extends REST_Controller {
                 
             } else {
                 $message = [
-                    'status'=>false,
+                    'status'=>400,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -237,110 +282,99 @@ class Produits extends REST_Controller {
     }
 
     /**
-    * Get article
-    * @method: GET
-    * @param: {Id}
-    */
-    public function produits_get($param='')
-    {
-        $produit= array();
-
-        if (empty($param)) {
-            
-            foreach ($this->ProduitModel->all_produit() as $row)
-            {
-                $data['id'] = $row->id;
-                $data['code'] = $this->get_detail_article($row->id)['code'];
-                $data['libelle'] = $this->get_detail_article($row->id)['libelle'];
-                $data['marque'] = $this->get_detail_article($row->id)['marque'];
-                $data['disponible'] = $row->is_dispo;
-                $data['trocable'] = $row->is_troc;
-                $data['status'] = $row->status;
-                $data['boutique'] = $row->id_boutique;
-                $data['quantite'] = $row->quantite;
-                $data['alert'] = $row->qte_alert;
-                $data['prix'] = $row->prix;
-                $data['images'] = $row->images;
-                $data['couleur'] = $row->couleur;
-                $data['caracteristiques'] = $this->ArticleMetaModel->meta_by_article_id($row->id_article);
-
-                $produit[] = $data;  
-            }     
-            if (empty($produit)) {
-                $this->set_response([
-                    'status'=>false,
-                    'message'=> $this->msg_not_found
-                ],
-                    REST_Controller::HTTP_NOT_FOUND
-                );
-            } else {
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-            }
-            
-        } else {
-            $row = $this->ProduitModel->produit($param);
-            $produit['id'] = $row->id;
-            $produit['code'] = $this->get_detail_article($row->id)['code'];
-            $produit['libelle'] = $this->get_detail_article($row->id)['libelle'];
-            $produit['marque'] = $this->get_detail_article($row->id)['marque'];
-            $produit['disponible'] = $row->is_dispo;
-            $produit['trocable'] = $row->is_troc;
-            $produit['status'] = $row->status;
-            $produit['boutique'] = $row->id_boutique;
-            $produit['quantite'] = $row->quantite;
-            $produit['alert'] = $row->qte_alert;
-            $produit['prix'] = $row->prix;
-            $produit['images'] = $row->images;
-            $produit['couleur'] = $row->couleur;
-            $produit['caracteristiques'] = $this->ArticleMetaModel->meta_by_article_id($row->id_article);
-            
-
-            if (empty($produit)) {
-                $this->set_response([
-                    'status'=>false,
-                    'message'=>$this->msg_not_found
-                ],
-                    REST_Controller::HTTP_NOT_FOUND
-                );
-            } else {
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-            }
-
-        }
-        $this->set_response($produit, REST_Controller::HTTP_OK);
-    }
-
+     * Formatage des données de l'article à afficher
+     */
     public function get_detail_article($id){
-        $row = $this->ArticleModel->article($id);
-        $article['id'] = $row->id;
-        $article['code'] = $row->code;
-        $article['created'] = $row->created_at;
-        $article['updated'] = $row->updated_at;
-        $article['libelle'] = $row->libelle;
-        $article['status'] = $row->status;
-        $article['etat'] = $row->etat;
-        $article['qte_package'] = $row->qte_package;
-        $article['marque'] = $this->get_marque($row->id_marque);
-        $article['fabricant'] = $row->fabricant;
-        $article['categorie'] = $this->get_categorie($row->id_sous_categorie);
-        $article['caracteristiques'] = $this->ArticleMetaModel->meta_by_article_id($row->id);
-
+        $article = array();
+        $row = $this->ArticleModel->get_article($id);
+        $row->marque = $this->MarqueModel->marque_libelle($row->marque);
+        $row->categorie = $this->CategorieModel->categorie_libelle($row->categorie);
+        $row->sous_categorie = $this->SousCategorieModel->sous_categorie_site($row->sous_categorie);
+        $caracteristiques = $this->ArticleMetaModel->meta_by_article_id($row->id);
+        $article = $row;
+        $article->caracteristiques = $caracteristiques;
         return $article;
 
     }
 
-    public function get_categorie($id){
-        $row = $this->SousCategorieModel->sous_categorie($id);
-        $categorie['id'] = $row->id;
-        $categorie['libelle'] = $row->libelle;
-        $categorie['type'] = $this->CategorieModel->categorie_libelle($row->id_categorie);
-
-        return $categorie;
+    public function split_image($image){
+        if(!empty($image) && strlen($image)>2){
+            $image = substr($image, 1, -1);
+            return explode(",",$image);
+        }else{
+            return $image;
+        }
     }
 
-    public function get_marque($id){
-        $row = $this->MarqueModel->marque_libelle($id);
-        $marque = $row;
-        return $marque;
+    public function upload_image($files, $code, $subdir){
+        $uploaddir = 'assets/images/produits/'+$subdir+'/'+$code;
+        if(!is_dir($uploaddir)){
+            mkdir($uploaddir,0775,true);
+        }
+        if ($files) {
+
+            $pathinfo = $files['filename'];
+            $value = $files['value'];
+            $value = substr($descr[0],9);
+            $value = str_replace(' ', '+', $value);
+            $image = base64_decode($value);
+            $ext = pathinfo($pathinfo, PATHINFO_EXTENSION);
+            $file_name = 'main';
+            $path = $uploaddir.$file_name.'.'.$ext;
+            file_put_contents($path, $image);
+
+            return $path;
+
+            // $images[]=$path;
+            // $pathinfo = $files['filename'];
+            // $image_value = $files['value'];
+            // $descr = explode(',', $image_value);
+            // $toreplace = $descr[0].',';
+            // $value = $descr[1];
+			// $value = str_replace(' ', '+', $value);
+            // $ext = pathinfo($pathinfo, PATHINFO_EXTENSION);
+            // $image = base64_decode($value);
+            // $file_name = 'main';
+            // $image_name = $file_name.'.'.$ext;
+            // $path = $uploaddir.$image_name;
+            // file_put_contents($path,$image);
+            // return $uploaddir.$image_name;
+        } else {
+            return ;
+        }
+        
     }
+
+    public function upload_images($files, $code, $subdir){
+        $images = '[';
+        $uploaddir = 'assets/images/produits/'.$subdir.'/'.$code.'/';
+        if(!is_dir($uploaddir)){
+            mkdir($uploaddir,0775,true);
+        }
+        if ($files && is_array($files)) {
+            $i = 1;
+            foreach ($files as $key) {
+                $pathinfo = $key['filename'];
+                $value = $key['value'];
+                $descr = explode(',', $value);
+                $value = substr($descr[0],9);
+                $value = str_replace(' ', '+', $value);
+                $image = base64_decode($value);
+                $ext = pathinfo($pathinfo, PATHINFO_EXTENSION);
+                $file_name = 'slides_'.($i++);
+                $path = $uploaddir.$file_name.'.'.$ext;
+                file_put_contents($path, $image);
+                $images.=$path.',';
+
+            }
+            $images = substr($images,0,-1);
+            return $images.']';
+
+        } else {
+            return;
+        }
+        
+    }
+
+
 }

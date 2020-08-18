@@ -8,7 +8,7 @@ class Ecran_Model extends CI_Model
 
     public function ecran($id)
     {
-        $qry = $this->db->get_where($this->ecran_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->ecran_table,array('ecran_id'=>$id));
         return $qry->row();        
     }
 
@@ -24,21 +24,21 @@ class Ecran_Model extends CI_Model
         return $this->db->insert_id();
     }
 
-    public function update(array $data, $id)
+    public function update(array $data)
     {
-        $query = $this->db->get_where($this->ecran_table,array('id'=>$id));
+        $query = $this->db->get_where($this->ecran_table,array('ecran_id'=>$data['ecran_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->ecran_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->ecran_table,$data,['ecran_id'=>$query->row('ecran_id')]);
         } 
         return false;
     }
 
     public function delete($id)
     {
-        $query = $this->db->get_where($this->ecran_table, array('id'=>$id));
+        $query = $this->db->get_where($this->ecran_table, array('ecran_id'=>$id));
         if ($this->db->affected_rows()>0) {
-            $this->db->delete($this->ecran_table, array('id'=>$id));
+            $this->db->delete($this->ecran_table, array('ecran_id'=>$id));
             if ($this->db->affected_rows()>0) {
                 return true;
             }

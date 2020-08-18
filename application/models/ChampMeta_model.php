@@ -6,16 +6,24 @@ class ChampMeta_Model extends CI_Model
 {
     protected $champ_meta_table = 'aqi_pp_champ_meta';
 
-    public function champ($id)
+    public function champ($param)
     {
-        $qry = $this->db->get_where($this->champ_meta_table,array('id'=>$id));
+        $this->db->where('id',$param);
+        $this->db->or_where('code',$param);
+        $query = $this->db->get($this->champ_meta_table);
+        return $query->row();        
+    }
+
+    public function champByCode($code)
+    {
+        $qry = $this->db->get_where($this->champ_meta_table,array('code'=>$code));
         return $qry->row();        
     }
 
     public function all_champ()
     {
         $query = $this->db->get($this->champ_meta_table);
-        return $query->result_array();
+        return $query->result();
     }
 
     public function create(array $data)

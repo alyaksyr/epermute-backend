@@ -8,7 +8,7 @@ class Camera_Model extends CI_Model
 
     public function camera($id)
     {
-        $qry= $this->db->get_where($this->camera_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->camera_table,array('camera_id'=>$id));
         return $qry->row();        
     }
 
@@ -25,9 +25,9 @@ class Camera_Model extends CI_Model
     public function cameras($ids)
     {
         $ids = json_decode($ids); 
-        $this->db->select('type,unite,resolution');
+        $this->db->select('camera_type,camera_unite,camera_resolution');
         $this->db->from($this->camera_table);
-        $this->db->where_in('id',$ids);
+        $this->db->where_in('camera_id',$ids);
         $qry = $this->db->get();
         return $qry->result_array();     
     }
@@ -44,10 +44,10 @@ class Camera_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->camera_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->camera_table,array('camera_id'=>$data['camera_id']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->camera_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->camera_table,$data,['camera_id'=>$query->row('camera_id')]);
         } 
         return false;
     }

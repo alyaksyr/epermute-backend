@@ -14,8 +14,18 @@ class ArticleMeta_Model extends CI_Model
 
     public function meta_by_article_id($id)
     {
-        $query= $this->db->get_where($this->meta_table,array('id_article'=>$id));
-        return $query->result_array();       
+        $this->db->select('meta_key key, meta_value value');
+        $this->db->from($this->meta_table);
+        $this->db->where('id_article', $id);
+        return $this->db->get()->result_array();       
+    }
+
+    public function get_meta_value_by_id_article($id){
+        $this->db->select('meta_value');
+        $this->db->from($this->meta_table);
+        $this->db->where('id_article',$id);
+        $qry = $this->db->get();
+        return $qry->result();
     }
 
     public function all_meta()
