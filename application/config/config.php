@@ -525,7 +525,7 @@ $config['rewrite_short_tags'] = FALSE;
 $config['proxy_ips'] = '';
 
 // example for my paypal testing: 
-$config['PHONEPLUS_jwt_key']='@AQIPPKOLOKALYSCHRIST_2019';
+$config['GPCINQDASUVCI_jwt_key']='@L3S6GROUPE05DASUVCI_2021';
 $config['token_timeout'] = 10;
 
 //Email Preference

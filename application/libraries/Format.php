@@ -1,5 +1,5 @@
 <?php
-namespace Phoneplus\Libraries;
+namespace Epermute\Libraries;
 use Exception;
 
 defined('BASEPATH') OR exit('No direct script access allowed');

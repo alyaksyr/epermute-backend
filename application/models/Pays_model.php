@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Pays_Model extends CI_Model
 {
-    protected $pays_table = 'aqi_pp_pays';
+    protected $pays_table = 'gp5das_pays';
 
     public function pays($id)
     {

@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH .'libraries/Format.php';
 
 /**

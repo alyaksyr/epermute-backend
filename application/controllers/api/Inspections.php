@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -15,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class SousCategories extends MY_Controller {
+class Inspections extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -23,35 +23,33 @@ class SousCategories extends MY_Controller {
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->model('sousCategorie_model','SousCategorieModel');
+        $this->load->model('inspection_model','InspectionModel');
+        $this->load->model('direction_model','DirectionModel');
 
     }
 
     /**
-     * Get Categorie Article 
+     * Get inspection 
      * @method: GET
      */
     public function index_get($param='')
     {
-        $sous_categorie= array();
-        $msg = '';
-        $this->load->model('categorie_model','CategorieModel');
+        $inspection= array();
+        $msg ='';
 
         if (empty($param)) {
             
-            foreach ($this->SousCategorieModel->all_sous_categorie() as $row)
+            foreach ($this->InspectionModel->all_inspection() as $row)
             {
-                $data['id'] = $row['scat_id'];
-                $data['libelle'] = $row['scat_libelle'];
-                $data['created'] = $row['scat_created_at'];
-                $data['updated'] = $row['scat_updated_at'];
-                $data['infos'] = $row['scat_infos'];
-                $data['slug'] = $row['scat_slug'];
-                $data['logo'] = $row['scat_image'];
-                $data['categorie'] = $this->CategorieModel->categorie($row['scat_id_categorie']);  
-                $sous_categorie[] = $data;  
+                $data['id'] = (int)$row->id;
+                $data['ville'] = $row->ville;
+                $data['inspection'] = $row->nom;
+                $data['contact'] = $row->contact;
+                $data['email'] = $row->email;
+                $data['direction'] = $this->DirectionModel->direction_detail((int)$row->id_dren);
+                $inspection[] = $data;  
             }     
-            if (empty($sous_categorie)) {
+            if (empty($inspection)) {
                 $this->set_response([
                     'status'=>404,
                     'message'=> $this->msg_not_found
@@ -60,13 +58,13 @@ class SousCategories extends MY_Controller {
                 );
                 return;
             } else {
-                $this->set_response($sous_categorie, REST_Controller::HTTP_OK);
-                $msg = 'Liste des sous catégories récupérée avec succès !';
+                $this->set_response($inspection, REST_Controller::HTTP_OK);
+                $msg='Liste des inspections récupérée avec succès !';
             }
             
         } else {
-            $row = $this->SousCategorieModel->sous_categorie($param);
-            
+            $row = $this->InspectionModel->inspection($param);
+
             if (empty($row)) {
                 $this->set_response([
                     'status'=>404,
@@ -76,25 +74,17 @@ class SousCategories extends MY_Controller {
                 );
                 return;
             } else {
-                $sous_categorie['id'] = $row->scat_id;
-                $sous_categorie['libelle'] = $row->scat_libelle;
-                $sous_categorie['created'] = $row->scat_created_at;
-                $sous_categorie['updated'] = $row->scat_updated_at;
-                $sous_categorie['infos'] = $row->scat_infos;
-                $sous_categorie['slug'] = $row->scat_slug;
-                $sous_categorie['logo'] = $row->scat_image;
-                $sous_categorie['categorie']=$this->CategorieModel->categorie($row->scat_id_categorie);
-
-                $this->set_response($sous_categorie, REST_Controller::HTTP_OK);
-                $msg = 'Sous catégorie récupérée avec succès !';
+                $inspection = $row;
+                $this->set_response($inspection, REST_Controller::HTTP_OK);
+                $msg='Caméra récupérée avec succès !';
             }
 
         }
-        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$sous_categorie], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200,'message'=>$msg,'data'=>$inspection], REST_Controller::HTTP_OK);
     }
 
     /**
-     * Create New Categorie Article
+     * Create New pays
      * @method: POST
      */
     public function index_post()
@@ -103,7 +93,7 @@ class SousCategories extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('scat_libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('id', 'Inspection id', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -112,17 +102,16 @@ class SousCategories extends MY_Controller {
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
-            return;
         }else{
 
-            $sous_categorie = $this->input->post();
-            $id = $this->SousCategorieModel->create($sous_categorie);
+            $pays = $this->input->post();
+            $id = $this->InspectionModel->create($pays);
             
             if ($id>0 AND !empty($id)) {
                
                 $message = [
                     'status'=>201,
-                    'message'=>"Catégorie Article ajoutée avec succes!",
+                    'message'=>"inspection ajoutée avec succes!",
                     'response'=>base_url().'/'.$id
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -138,7 +127,7 @@ class SousCategories extends MY_Controller {
     }
 
     /**
-     * Update Categorie Article
+     * Update Ville
      * @method: PUT
      */
     public function index_put()
@@ -147,8 +136,7 @@ class SousCategories extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('scat_id', 'Sous Categorie ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('scat_libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('id', 'inspection ID', 'trim|required|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -157,23 +145,22 @@ class SousCategories extends MY_Controller {
                 'message'=>validation_errors()
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
-            return;
         }else{
-            $sous_categorie = $this->input->post();
-            $sous_categorie['scat_id'] = $this->input->post('scat_id',TRUE);
+            $inspection = $this->input->post();
+            $inspection['id'] = $this->input->post('id',TRUE);
 
-            $outpout = $this->SousCategorieModel->update($sous_categorie);
+            $outpout = $this->InspectionModel->update($inspection);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"Catégorie Article Modifiée avec succes!"
+                    'message'=>"inspection Modifiée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
                 
             } else {
                 $message = [
-                    'status'=>400,
+                    'status'=>false,
                     'message'=>"Une erreur est survenue lors de l'enregistrement!"
                 ];
 
@@ -183,7 +170,7 @@ class SousCategories extends MY_Controller {
     }
 
     /**
-     * Delete Categorie Article
+     * Delete Pays
      * @method: DELETE
      */
     public function index_delete($id)
@@ -194,19 +181,18 @@ class SousCategories extends MY_Controller {
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
                 'status'=>404,
-                'message'=>'L\'Id de la catégorie n\'existe'
+                'message'=>'L\'Id du type de inspection n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
-            return;
         } else {
-            $sous_categorie= [
-                'scat_id'=>$id
+            $inspection= [
+                'id'=>$id
             ];
-            $outpout = $this->SousCategorieModel->delete($sous_categorie);
+            $outpout = $this->InspectionModel->delete($inspection);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>200,
-                    'message'=>"Catégorie Article supprimée avec succes!"
+                    'message'=>"inspection supprimée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_OK);

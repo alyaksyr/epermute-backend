@@ -1,6 +1,6 @@
 <?php
 
-namespace phoneplus\Libraries;
+namespace epermute\Libraries;
 use CI_Controller;
 use Exception;
 use stdClass;

@@ -2,7 +2,7 @@
 //use Restserver\Libraries\REST_Controller;
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH . 'libraries/Format.php';
 
 /**
@@ -16,126 +16,146 @@ require APPPATH . 'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Articles extends MY_Controller {
-
-    public $msg_not_found = 'Aucun enregitrement trouvé !';
-
+class Demandes extends MY_Controller {
+    protected $msg_not_found= 'Aucun n\'enregisterment trouvé !';
     function __construct()
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->model('article_model','ArticleModel');
-        $this->load->model('sousCategorie_model','SousCategorieModel');
-        $this->load->model('Categorie_model','CategorieModel');
-        $this->load->model('articleMeta_model','ArticleMetaModel');
-        $this->load->model('marque_model','MarqueModel');
+        $this->load->model('demande_model','DemandeModel');
+        $this->load->model('user_model','UserModel');
+        $this->load->model('inspection_model','InspectionModel');
+        $this->load->model('direction_model','DirectionModel');
 
     }
 
     /**
-     * Get article
+     * Get demande
      * @method: GET
      * @param: {Id}
      */
     public function index_get($param='')
     {
-        $article = array();
+        $demande= array();
+        $msg ='';
+        $this->load->model('inspection_model','InspectionModel');
+        $this->load->model('direction_model','DirectionModel');
 
         if (empty($param)) {
             
-            $article = $this->ArticleModel->all_article();   
-            if (empty($article)) {
+            $demande = $this->DemandeModel->all_demande();
+            if (empty($demande)) {
                 $this->set_response([
-                    'status'=>false,
+                    'status'=>404,
                     'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
                 return;
             } else {
-                $this->set_response($article, REST_Controller::HTTP_OK);
+                $msg = 'Liste des demandes recuperée avec succès !';
+                $this->set_response($demande, REST_Controller::HTTP_OK);
             }
             
         } else {
-            $row = $this->ArticleModel->article($param);            
+            $row = $this->DemandeModel->demande($param);
 
             if (empty($row)) {
                 $this->set_response([
-                    'status'=>400,
-                    'message'=>$this->msg_not_found,
-                    'data'=>$row
+                    'status'=>404,
+                    'message'=>$this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
                 return;
             } else {
-                $article = $row;
+
+                $demande = $row;
+                $this->set_response($demande, REST_Controller::HTTP_OK);
+
+                $msg = 'demande recuperée avec succès !';
             }
 
         }
-        $this->set_response(['status'=>200,'message'=>'Requête exécutée avec succès!','data'=>$article], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200,'message'=>$msg,'data'=>$demande], REST_Controller::HTTP_OK);
     }
 
     /**
-     * Get article
+     * Get all infos de la demande
      * @method: GET
      * @param: {Id}
      */
-    public function list_article_get($param='')
+    public function list_demande_get($param='')
     {
-        $article = array();
+        $demande= array();
+        $msg ='';
 
         if (empty($param)) {
-            foreach ($this->ArticleModel->get_article() as $row)
-            {
-                $row->caracteristiques = $this->ArticleMetaModel->meta_by_article_id($row->id);
-                $article[]= $row;
-            }
-            if (empty($article)) {
-                $this->set_response([
-                    'status'=>false,
-                    'message'=> $this->msg_not_found
-                ],REST_Controller::HTTP_NOT_FOUND);
-                return;
-            } else {
-                $this->set_response($article, REST_Controller::HTTP_OK);
-            }
-            
-        } else {
-            $row = $this->ArticleModel->get_article($param);            
+            foreach($this->DemandeModel->get_demande() as $row){
+                
+                $row->inspection = $this->InspectionModel->inspection_dren($row->inspection);
+                $row->inspection->dren = $this->DirectionModel->direction_detail($row->inspection->dren);
+                $row->demandeur = $this->UserModel->user_information($row->demandeur);
+                $row->demandeur->inspection = $this->InspectionModel->inspection_dren($row->demandeur->inspection);
+                $row->demandeur->inspection->dren = $this->DirectionModel->direction_detail($row->demandeur->inspection->dren);
 
-            if (empty($row)) {
+                $demande[] = $row;
+            }
+            if (empty($demande)) {
                 $this->set_response([
-                    'status'=>400,
-                    'message'=>$this->msg_not_found,
-                    'data'=>$row
+                    'status'=>404,
+                    'message'=> $this->msg_not_found
                 ],
                     REST_Controller::HTTP_NOT_FOUND
                 );
                 return;
             } else {
-                $row->caracteristiques = $this->ArticleMetaModel->meta_by_article_id($row->id);
-                $article = $row;
+                $msg = 'Liste des demandes recuperée avec succès !';
+                $this->set_response($demande, REST_Controller::HTTP_OK);
+            }
+            
+        } else {
+           $row = $this->DemandeModel->get_demande($param);
+
+            if (empty($row)) {
+                $this->set_response([
+                    'status'=>404,
+                    'message'=>$this->msg_not_found
+                ],
+                    REST_Controller::HTTP_NOT_FOUND
+                );
+                return;
+            } else {
+                $row->inspection = $this->InspectionModel->inspection_dren($row->inspection);
+                $row->inspection->dren = $this->DirectionModel->direction_detail($row->inspection->dren);
+                $row->demandeur = $this->UserModel->user_information($row->demandeur);
+                $row->demandeur->inspection = $this->InspectionModel->inspection_dren($row->demandeur->inspection);
+                $row->demandeur->inspection->dren = $this->DirectionModel->direction_detail($row->demandeur->inspection->dren);
+
+                $demande = $row;
+                $this->set_response($demande, REST_Controller::HTTP_OK);
+
+                $msg = 'demande recuperée avec succès !';
             }
 
         }
-        $this->set_response(['status'=>200,'message'=>'Requête exécutée avec succès!','data'=>$article], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200,'message'=>$msg,'data'=>$demande], REST_Controller::HTTP_OK);
     }
 
     /**
-     * Create New article
+     * Create New demande
      * @method: POST
      */
     public function index_post()
     {
         $this->auth();
+        $min = 0;
+        $max = 9;
+        $nombre='';
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('libelle', 'Libellé', 'trim|required');
-        $this->form_validation->set_rules('code', 'Article Code', 'trim|required|is_unique[aqi_pp_article.code]',
-            array('is_unique'=>'Ce code existe déja !')
-        );
+        $this->form_validation->set_rules('id_demandeur', 'Demandeur', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -146,14 +166,18 @@ class Articles extends MY_Controller {
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
             $data = $this->input->post();
-            $data['updated_at'] = date('Y-m-d\TH:i:s.u');
             $data['created_at'] = date('Y-m-d\TH:i:s.u');
-
-            $outpout = $this->ArticleModel->create($data);
+            $data['updated_at'] = date('Y-m-d\TH:i:s.u');
+            for($i=0; $i<7;$i++){
+                $nombre.=rand(0,9);
+            }
+            $rand = substr(uniqid('',true),-5);
+            $data['num_demande'] = $nombre .' '. strtoupper($rand);
+            $outpout = $this->DemandeModel->create($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"Article ajoutée avec succes!",
+                    'message'=>"demande ajoutée avec succes!",
                     'response'=>$outpout
                 ];
 
@@ -171,7 +195,7 @@ class Articles extends MY_Controller {
     }
 
     /**
-     * Delete article
+     * Delete demande
      * @method: DELETE
      */
     public function index_delete($id)
@@ -182,18 +206,18 @@ class Articles extends MY_Controller {
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
                 'status'=>404,
-                'message'=>'L\'Id de la article n\'existe'
+                'message'=>'L\'Id de la demande n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
         } else {
-            $article= [
+            $demande= [
                 'id'=>$id
             ];
-            $outpout = $this->ArticleModel->delete($article);
+            $outpout = $this->DemandeModel->delete($demande);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>200,
-                    'message'=>"Article supprimée avec succes!"
+                    'message'=>"demande supprimée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_OK);
@@ -211,7 +235,7 @@ class Articles extends MY_Controller {
     }
 
     /**
-     * Update article
+     * Update demande
      * @method: PUT
      */
 
@@ -221,9 +245,8 @@ class Articles extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('id', 'article ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('libelle', 'Libellé', 'trim|required');
-        $this->form_validation->set_rules('code', 'Article Code', 'trim|required');
+        $this->form_validation->set_rules('id', 'demande ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('num_demande', 'Numéro de la demande', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -237,11 +260,11 @@ class Articles extends MY_Controller {
             $data['id'] = $this->input->post('id',TRUE);
             $data['updated_at'] = date('Y-m-d\TH:i:s.u');
 
-            $outpout = $this->ArticleModel->update($data);
+            $outpout = $this->DemandeModel->update($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"Article Modifiée avec succes!"
+                    'message'=>"demande Modifiée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -256,5 +279,4 @@ class Articles extends MY_Controller {
             }
         }
     }
-
 }

@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Ville_Model extends CI_Model
 {
-    protected $ville_table = 'aqi_pp_ville';
+    protected $ville_table = 'gp5das_ville';
 
     public function ville($id)
     {

@@ -5,7 +5,8 @@ require_once APPPATH . '/libraries/JWT.php';
 require_once APPPATH . '/libraries/BeforeValidException.php';
 require_once APPPATH . '/libraries/ExpiredException.php';
 require_once APPPATH . '/libraries/SignatureInvalidException.php';
-use Phoneplus\Libraries\REST_Controller;
+
+use Epermute\Libraries\REST_Controller;
 use \Firebase\JWT\JWT;
 
 class MY_Controller extends REST_Controller
@@ -18,7 +19,7 @@ class MY_Controller extends REST_Controller
         $this->methods['users_delete']['limit'] = 50; // 50 requests per hour per user/key
         //JWT Auth middleware
         $headers = $this->input->get_request_header('Authorization');
-        $key = $this->config->item('PHONEPLUS_jwt_key');
+        $key = $this->config->item('GPCINQDASUVCI_jwt_key');
         $token= "token";
        	if (!empty($headers)) {
         	if (preg_match('/Bearer\s(\S+)/', $headers , $matches)) {

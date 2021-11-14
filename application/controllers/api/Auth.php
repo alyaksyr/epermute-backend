@@ -2,7 +2,7 @@
 
 defined('BASEPATH') OR exit('No direct script access allowed');
 use \Firebase\JWT\JWT;
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH . 'libraries/Format.php';
 // require APPPATH . '/libraries/REST_Controller.php';
 // require APPPATH . 'libraries/JWT.php';
@@ -37,14 +37,14 @@ class Auth extends MY_Controller {
         $this->form_validation->set_data($_POST);
 
         $this->form_validation->set_rules('password', 'Password', 'trim|required');
-        $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required|is_unique[aqi_pp_users.mobile]',
+        $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required|is_unique[gp5das_user.mobile]',
             array('is_unique'=>'Ce numero de telephone existe déja !')
         );
-        $this->form_validation->set_rules('email', 'Email', 'trim|is_unique[aqi_pp_users.email]|valid_email',
+        $this->form_validation->set_rules('email', 'Email', 'trim|is_unique[gp5das_user.email]|valid_email',
             array('is_unique'=>'Cet email existe déja !')
         );
-        $this->form_validation->set_rules('login', 'Login', 'trim|is_unique[aqi_pp_users.login]',
-            array('is_unique'=>'Cet Login existe déja !')
+        $this->form_validation->set_rules('matricule', 'Numéro matricule', 'trim|is_unique[gp5das_user.matricule]',
+            array('is_unique'=>'Ce numéro matricule existe déja !')
         );
 
        if ($this->form_validation->run() == FALSE)
@@ -59,11 +59,9 @@ class Auth extends MY_Controller {
        else
        {
            $data = $this->input->post();
-           $data['modified'] = date('Y-m-d\TH:i:s.u');
-           $data['registred '] = date('Y-m-d\TH:i:s.u');
-           $data['code'] = time();
+           $data['updated_at'] = date('Y-m-d\TH:i:s.u');
+           $data['created_at'] = date('Y-m-d\TH:i:s.u');
            $data['password'] = password_hash($this->encrypt_pwd($this->input->post('password'), PASSWORD_BCRYPT));
-           $data['activation_key'] = $this->code_confirm();
 
            $outpout = $this->UserModel->insert_user($data);
            if ($outpout>0 AND !empty($outpout)) {
@@ -92,12 +90,12 @@ class Auth extends MY_Controller {
 
     public function login_post()
     {
-        $key = $this->config->item('PHONEPLUS_jwt_key');
+        $key = $this->config->item('GPCINQDASUVCI_jwt_key');
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
         $this->form_validation->set_rules('password', 'Password', 'trim|required');
-        $this->form_validation->set_rules('login', 'Login', 'trim|required');
+        $this->form_validation->set_rules('mobile', 'Mobile', 'trim|required');
 
        if ($this->form_validation->run() == FALSE)
        {
@@ -109,7 +107,7 @@ class Auth extends MY_Controller {
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         } else
         {
-            $outpout = $this->UserModel->user_login($this->input->post('login'),$this->encrypt_pwd($this->input->post('password')));
+            $outpout = $this->UserModel->user_login($this->input->post('mobile'),$this->encrypt_pwd($this->input->post('password')));
             if (!empty($outpout) AND $outpout != FALSE) 
             {
                 $token = array();
@@ -121,12 +119,11 @@ class Auth extends MY_Controller {
 
                 $user_data = [
                     'id'=>$outpout->id,
-                    'code'=>$outpout->code,
+                    'matricule'=>$outpout->matricule,
                     'nom'=>$outpout->nom,
-                    'prenom'=>$outpout->prenom,
-                    'image'=>$outpout->photo,
+                    'prenoms'=>$outpout->prenoms,
                     'email'=>$outpout->email,
-                    'nickname'=>$outpout->nickname
+                    'mobile'=>$outpout->mobile
                 ];
                 
                 $data['token'] = JWT::encode($token,$key);
@@ -166,7 +163,7 @@ class Auth extends MY_Controller {
         $this->form_validation->set_rules('id', 'User ID', 'trim|required|numeric');
         $this->form_validation->set_rules('password', 'Mot de passe', 'trim|password');
         $this->form_validation->set_rules('token', 'Token', 'trim|required');
-        $this->form_validation->set_rules('login', 'Login', 'trim|required');
+        $this->form_validation->set_rules('matricule', 'Matricule', 'trim|required');
         
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -180,7 +177,7 @@ class Auth extends MY_Controller {
             if (!emtpy($code)) {
                 $data = $this->input->post();
                 $data['id'] = $this->input->post('id',TRUE);
-                $data['modified'] = date('Y-m-d\TH:i:s.u');
+                $data['updated_at'] = date('Y-m-d\TH:i:s.u');
                 $data['password'] = $this->encrypt_pwd($this->input->post('password'));
                 $data['token'] = $code; 
 
@@ -218,7 +215,7 @@ class Auth extends MY_Controller {
      */
 
     public function send_code_get(){
-        $key = $this->config->item('PHONEPLUS_jwt_key');
+        $key = $this->config->item('GPCINQDASUVCI_jwt_key');
         $data = '';
         $user = $this->get('user');
         if (!empty($user)) {
@@ -249,7 +246,7 @@ class Auth extends MY_Controller {
 
                 $users['token'] = $code;
                 $users['reset_code'] = $confirm_code;
-                $users['modified'] = date('Y-m-d\TH:i:s.u');
+                $users['updated_at'] = date('Y-m-d\TH:i:s.u');
 
                 $outpout = $this->UserModel->update_user_by_email($user,$users);
                 if ($outpout>0 AND !empty($outpout)) {
@@ -294,7 +291,7 @@ class Auth extends MY_Controller {
 
         $this->email->initialize($this->config->config);
         $this->email->set_newline("\r\n");
-        $this->email->from($from, 'PHONEPLUS CI');
+        $this->email->from($from, 'E-PERMUTE MENA');
         $this->email->to($to);
         $this->email->subject($subject);
         $this->email->message($message);
@@ -326,7 +323,7 @@ class Auth extends MY_Controller {
     }
     
     public function verif_Token($token){
-        $key = $this->config->item('PHONEPLUS_jwt_key');
+        $key = $this->config->item('GPCINQDASUVCI_jwt_key');
         if (!empty($token)) {
             $verif_token = JWT::decode($token,$key);
             $exp = $verif_token['exp'];

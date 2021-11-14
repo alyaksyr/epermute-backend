@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -15,7 +15,7 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Systemes extends MY_Controller {
+class Directions extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
@@ -23,27 +23,23 @@ class Systemes extends MY_Controller {
     {
         // Construct the parent class
         parent::__construct();
-        $this->load->model('systeme_model', 'SystemeModel');
+        $this->load->model('direction_model','DirectionModel');
 
     }
 
-         /**
-     * Get Systeme 
+    /**
+     * Get Type Article
      * @method: GET
      */
     public function index_get($param='')
     {
-        $systeme= array();
-        $msg = '';
+        $direction= array();
+        $msg ='';
 
         if (empty($param)) {
             
-            foreach ($this->SystemeModel->all_systeme() as $row)
-            {
-                $data = $row;
-                $systeme[] = $data;  
-            }     
-            if (empty($systeme)) {
+           $direction = $this->DirectionModel->all_direction();  
+            if (empty($direction)) {
                 $this->set_response([
                     'status'=>404,
                     'message'=> $this->msg_not_found
@@ -52,12 +48,12 @@ class Systemes extends MY_Controller {
                 );
                 return;
             } else {
-                $this->set_response($systeme, REST_Controller::HTTP_OK);
-                $msg = 'Liste des systèmes récupérée avec succès !';
+                $this->set_response($direction, REST_Controller::HTTP_OK);
+                $msg ='Liste des directions recupérée avec succès !';
             }
             
         } else {
-            $row = $this->SystemeModel->systeme($param);
+            $row = $this->DirectionModel->direction($param);
 
             if (empty($row)) {
                 $this->set_response([
@@ -68,17 +64,17 @@ class Systemes extends MY_Controller {
                 );
                 return;
             } else {
-                $systeme = $row;
-                $this->set_response($systeme, REST_Controller::HTTP_OK);
-                $msg = 'Système récupéré avec succès !';
+                $direction = $row;
+                $this->set_response($direction, REST_Controller::HTTP_OK);
+                $msg ='Catégorie d\'articles recupérée avec succès !';
             }
 
         }
-        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$systeme], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$direction], REST_Controller::HTTP_OK);
     }
 
     /**
-     * Create New Systeme
+     * Create New Direction
      * @method: POST
      */
     public function index_post()
@@ -87,10 +83,7 @@ class Systemes extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('systeme_libelle', 'Systeme Libelle', 'trim|required');
-        $this->form_validation->set_rules('systeme_code', 'Systeme Code', 'trim|required|is_unique[aqi_pp_systeme.systeme_code]',
-            array('is_unique'=>'Ce code existe déja !')
-        );
+        $this->form_validation->set_rules('nom', 'Nom de la direction', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -101,14 +94,14 @@ class Systemes extends MY_Controller {
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
 
-            $systeme = $this->input->post();
-            $id = $this->SystemeModel->create($systeme);
+            $direction = $this->input->post();
+            $id = $this->DirectionModel->create($direction);
             
             if ($id>0 AND !empty($id)) {
                
                 $message = [
                     'status'=>201,
-                    'message'=>"Système ajouté avec succes!",
+                    'message'=>"Direction ajoutée avec succes!",
                     'response'=>base_url().'/'.$id
                 ];
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -124,7 +117,7 @@ class Systemes extends MY_Controller {
     }
 
     /**
-     * Update Systeme
+     * Update direction produit
      * @method: PUT
      */
     public function index_put()
@@ -133,9 +126,8 @@ class Systemes extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('systeme_id', 'Systeme ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('systeme_code', 'Code', 'trim|required');
-        $this->form_validation->set_rules('systeme_libelle', 'Libelle', 'trim|required');
+        $this->form_validation->set_rules('id', 'direction ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('nom', 'Nom de la direction', 'trim|required');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -145,14 +137,14 @@ class Systemes extends MY_Controller {
             );
             $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
         }else{
-            $systeme = $this->input->post();
-            $systeme['systeme_id'] = $this->input->post('systeme_id',TRUE);
+            $direction = $this->input->post();
+            $direction['id'] = $this->input->post('id',TRUE);
 
-            $outpout = $this->SystemeModel->update($systeme);
+            $outpout = $this->DirectionModel->update($direction);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"Systeme Modifié avec succes!"
+                    'message'=>"direction Modifiée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -169,7 +161,7 @@ class Systemes extends MY_Controller {
     }
 
     /**
-     * Delete Systeme
+     * Delete Type Article
      * @method: DELETE
      */
     public function index_delete($id)
@@ -180,18 +172,18 @@ class Systemes extends MY_Controller {
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
                 'status'=>404,
-                'message'=>'Cet id n\'existe'
+                'message'=>'L\'Id  n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
         } else {
-            $systeme= [
-                'systeme_id'=>$id
+            $direction= [
+                'id'=>$id
             ];
-            $outpout = $this->SystemeModel->delete($systeme);
+            $outpout = $this->DirectionModel->delete($direction);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>200,
-                    'message'=>"Système supprimé avec succes!"
+                    'message'=>"Catégorie supprimée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_OK);
@@ -206,4 +198,5 @@ class Systemes extends MY_Controller {
             }
         }
     }
+
 }

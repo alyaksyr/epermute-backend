@@ -1,6 +1,6 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Phoneplus\Libraries\REST_Controller;
+use Epermute\Libraries\REST_Controller;
 require APPPATH .'libraries/Format.php';
 
 /**
@@ -14,41 +14,38 @@ require APPPATH .'libraries/Format.php';
  * @license         MIT
  * @link            https://www.aquickintl.com
  */
-class Produits extends MY_Controller {
+class Fiches extends MY_Controller {
 
     public $msg_not_found = 'Aucun enregitrement trouvé !';
 
     function __construct()
     {
         // Construct the parent class
+        // $this->auth();
         parent::__construct();
-        $this->load->model('article_model','ArticleModel');
-        $this->load->model('produit_model','ProduitModel');
-        $this->load->model('sousCategorie_model','SousCategorieModel');
-        $this->load->model('Categorie_model','CategorieModel');
-        $this->load->model('articleMeta_model','ArticleMetaModel');
-        $this->load->model('marque_model','MarqueModel');
-        $this->load->model('TrocMeta_model','TrocMetaModel');
-        $this->load->model('boutique_model','BoutiqueModel');
-        $this->load->model('Comment_model','CommentModel');
+        $this->load->model('fiche_model','FicheModel');
+        $this->load->model('demande_model','DemandeModel');
+        $this->load->model('user_model','UserModel');
+        $this->load->model('inspection_model','InspectionModel');
+        $this->load->model('direction_model','DirectionModel');
 
     }
 
     /**
-    * Get produits
+    * Get fiches
     * @method: GET
     * @param: {Id}
     */
     public function index_get($param='')
     {
-        $produit = array();
+        $fiche = array();
         $msg='';
 
         if (empty($param)) {
             
-            $produit = $this->ProduitModel->all_produit();
+            $fiche = $this->FicheModel->all_fiche();
      
-            if (empty($produit)) {
+            if (empty($fiche)) {
                 $this->set_response([
                     'status'=>404,
                     'message'=> $this->msg_not_found
@@ -57,12 +54,12 @@ class Produits extends MY_Controller {
                 );
                 return;
             } else {
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-                $msg = 'Liste des produits récupérée avec succès !';
+                $this->set_response($fiche, REST_Controller::HTTP_OK);
+                $msg = 'Liste des fiches récupérée avec succès !';
             }
             
         } else {
-            $row = $this->ProduitModel->produit($param);            
+            $row = $this->FicheModel->fiche($param);            
 
             if (empty($row)) {
                 $this->set_response([
@@ -73,37 +70,37 @@ class Produits extends MY_Controller {
                 );
                 return;
             } else {
-                $produit = $row;
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-                $msg = 'Produit récupéré avec succès !';
+                $fiche = $row;
+                $this->set_response($fiche, REST_Controller::HTTP_OK);
+                $msg = 'fiche récupéré avec succès !';
             }
 
         }
-        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$produit], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$fiche], REST_Controller::HTTP_OK);
     }
 
     /**
-    * Liste produit  pour le site
+    * Liste fiche  pour le site
     * @method: GET
     */
-    public function list_products_get($param='')
+    public function list_fiches_get($param)
     {
-        $produit = array();
+        $fiche = array();
         $msg='';
         /**Verifie si le parametres n'existe pas */
-        if (empty($param)) {
-            foreach ($this->ProduitModel->get_products() as $row)
+        if (!empty($param)) {
+            foreach ($this->FicheModel->all_fiche_by_user($param) as $row)
             {
-                $images = $this->split_image($row->images);
-                $images[] = $row->image;
-                $row->images = $images;
-                $row->rate = $this->CommentModel->get_avg_comment($row->id);
-                $row->rating = $this->CommentModel->get_comment($row->id);
-                $row->article = $this->get_detail_article((int)$row->article);
-                $row->boutique = $this->BoutiqueModel->get_boutique($row->boutique);
-                $produit[]= $row;
+                $row->demandeur = $this->UserModel->user_information($row->demandeur);
+                $row->demandeur->inspection = $this->InspectionModel->inspection_dren($row->demandeur->inspection);
+                $row->demandeur->inspection->dren = $this->DirectionModel->direction_detail($row->demandeur->inspection->dren);
+                $row->recepteur = $this->UserModel->user_information($row->recepteur);
+                $row->recepteur->inspection = $this->InspectionModel->inspection_dren($row->recepteur->inspection);
+                $row->recepteur->inspection->dren = $this->DirectionModel->direction_detail($row->recepteur->inspection->dren);
+
+                $fiche[]= $row;
             }
-            if (empty($produit)) {
+            if (empty($fiche)) {
                 $this->set_response([
                     'status'=>404,
                     'message'=> $this->msg_not_found
@@ -112,48 +109,38 @@ class Produits extends MY_Controller {
                 );
                 return;
             } else {
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-                $msg = 'Liste des produits récupérée avec succès !';
+                $this->set_response($fiche, REST_Controller::HTTP_OK);
+                $msg = 'Liste des fiches récupérée avec succès !';
             }
         }else{
-            $row = $this->ProduitModel->get_products($param);
-            if (empty($row)) {
-                $this->set_response([
-                    'status'=>404,
-                    'message'=>$this->msg_not_found
-                ],
-                    REST_Controller::HTTP_NOT_FOUND
-                );
-                return;
-            } else {
-                $images = $this->split_image($row->images);
-                $images[] = $row->image;
-                $row->images = $images;
-                $row->rate = $this->CommentModel->get_avg_comment($row->id);
-                $row->rating = $this->CommentModel->get_comment($row->id);
-                $row->article = $this->get_detail_article((int)$row->article);
-                $row->boutique = $this->BoutiqueModel->get_boutique($row->boutique);
-                $produit = $row;
-                $this->set_response($produit, REST_Controller::HTTP_OK);
-                $msg = 'Produit récupéré avec succès !';
-            }
+           
+            $this->set_response([
+                'status'=>404,
+                'message'=>$this->msg_not_found
+            ],
+                REST_Controller::HTTP_NOT_FOUND
+            );
+            return;
         }
         
-        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$produit], REST_Controller::HTTP_OK);
+        $this->set_response(['status'=>200, 'message'=>$msg, 'data'=>$fiche], REST_Controller::HTTP_OK);
     }
 
     /**
-     * Create New produit
+     * Create New fiche
      * @method: POST
      */
     public function index_post()
     {
-        $this->auth();
-        $date = new DateTime();
+        // $this->auth();
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('produit_prix', 'Prix', 'trim|required|numeric');
+        $this->form_validation->set_rules('id_demandeur', 'Le demandeur', 'trim|required|numeric');
+        $this->form_validation->set_rules('id_recepteur', 'Le recepteur', 'trim|required|numeric');
+        $this->form_validation->set_rules('num_demande', 'Numéro de la demande', 'trim|required|is_unique[gp5das_fiche.num_demande]',
+            array('is_unique'=>'Cette demande n\'est plus active !')
+        );
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -165,16 +152,16 @@ class Produits extends MY_Controller {
         }else{
             $data = $this->input->post();
             $photo = $this->upload_image($this->input->post('images'));
-            $data['produit_main_image'] = $photo;
-            $data['produit_code'] = $date->getTimestamp();
-            $data['produit_modified'] = date('Y-m-d\TH:i:s.u');
-            $data['produit_added'] = date('Y-m-d\TH:i:s.u');
+            $data['fiche_main_image'] = $photo;
+            $data['fiche_code'] = $date->getTimestamp();
+            $data['fiche_modified'] = date('Y-m-d\TH:i:s.u');
+            $data['fiche_added'] = date('Y-m-d\TH:i:s.u');
 
-            $outpout = $this->ProduitModel->create($data);
+            $outpout = $this->ficheModel->create($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"produit ajoutée avec succes!",
+                    'message'=>"fiche ajoutée avec succes!",
                     'response'=>base_url().'/'.$outpout
                 ];
 
@@ -192,7 +179,7 @@ class Produits extends MY_Controller {
     }
 
     /**
-     * Delete produit
+     * Delete fiche
      * @method: DELETE
      */
     public function index_delete($id)
@@ -203,19 +190,19 @@ class Produits extends MY_Controller {
         if (empty($id) AND !is_numeric($id)) {
             $this->set_response([
                 'status'=>404,
-                'message'=>'L\'Id de la produit n\'existe'
+                'message'=>'L\'Id de la fiche n\'existe'
             ],
             REST_Controller::HTTP_NOT_FOUND);
             return;
         } else {
-            $produit= [
-                'produit_id'=>$id
+            $fiche= [
+                'fiche_id'=>$id
             ];
-            $outpout = $this->ProduitModel->delete($produit);
+            $outpout = $this->ficheModel->delete($fiche);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>200,
-                    'message'=>"produit supprimée avec succes!"
+                    'message'=>"fiche supprimée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_OK);
@@ -233,7 +220,7 @@ class Produits extends MY_Controller {
     }
 
     /**
-     * Update produit
+     * Update fiche
      * @method: PUT
      */
 
@@ -242,8 +229,8 @@ class Produits extends MY_Controller {
         $_POST = $this->security->xss_clean(json_decode(file_get_contents('php://input'),true));
         $this->form_validation->set_data($_POST);
 
-        $this->form_validation->set_rules('produit_id', 'produit ID', 'trim|required|numeric');
-        $this->form_validation->set_rules('produit_prix', 'Prix Produit', 'trim|numeric');
+        $this->form_validation->set_rules('fiche_id', 'fiche ID', 'trim|required|numeric');
+        $this->form_validation->set_rules('fiche_prix', 'Prix fiche', 'trim|numeric');
 
         if ($this->form_validation->run() == FALSE){
             $message = array(
@@ -256,16 +243,16 @@ class Produits extends MY_Controller {
         }else{
             $data = $this->input->post();
             $photo = $this->upload_images($this->input->post('images'),'1595258896','phoneplus');
-            $data['produit_images'] = $photo;
-            $data['produit_prix'] = $this->input->post('prix',TRUE);
-            $data['produit_id'] = $this->input->post('id',TRUE);
-            $data['produit_modified'] = date('Y-m-d\TH:i:s.u');
+            $data['fiche_images'] = $photo;
+            $data['fiche_prix'] = $this->input->post('prix',TRUE);
+            $data['fiche_id'] = $this->input->post('id',TRUE);
+            $data['fiche_modified'] = date('Y-m-d\TH:i:s.u');
 
-            $outpout = $this->ProduitModel->update($data);
+            $outpout = $this->ficheModel->update($data);
             if ($outpout>0 AND !empty($outpout)) {
                 $message = [
                     'status'=>201,
-                    'message'=>"produit Modifiée avec succes!"
+                    'message'=>"fiche Modifiée avec succes!"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_CREATED);
@@ -307,7 +294,7 @@ class Produits extends MY_Controller {
     }
 
     public function upload_image($files, $code, $subdir){
-        $uploaddir = 'assets/images/produits/'+$subdir+'/'+$code;
+        $uploaddir = 'assets/images/fiches/'+$subdir+'/'+$code;
         if(!is_dir($uploaddir)){
             mkdir($uploaddir,0775,true);
         }
@@ -347,7 +334,7 @@ class Produits extends MY_Controller {
 
     public function upload_images($files, $code, $subdir){
         $images = '[';
-        $uploaddir = 'assets/images/produits/'.$subdir.'/'.$code.'/';
+        $uploaddir = 'assets/images/fiches/'.$subdir.'/'.$code.'/';
         if(!is_dir($uploaddir)){
             mkdir($uploaddir,0775,true);
         }
