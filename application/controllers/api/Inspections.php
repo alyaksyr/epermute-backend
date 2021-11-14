@@ -200,7 +200,7 @@ class Inspections extends MY_Controller {
             } else {
                 $message = [
                     'status'=>400,
-                    'message'=>"Une erreur est survenue lors de l'enregistrement!"
+                    'message'=>"Une erreur est survenue lors de l'enregistrement !"
                 ];
 
                 $this->response($message, REST_Controller::HTTP_BAD_REQUEST);
