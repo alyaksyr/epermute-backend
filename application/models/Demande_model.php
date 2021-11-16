@@ -6,17 +6,17 @@ class Demande_Model extends CI_Model
 {
     protected $demande_table = 'gp5das_demande';
     protected $select = '
-        id,
-        num_demande,
-        annee,
-        id_demandeur demandeur,
-        id_iepp inspection,
-        service ecole,
-        localite,
-        is_valide valide,
-        is_active active,
-        couverture,
-        description
+        id_demande id,
+        num_demande numero,
+        annee_demande annee,
+        proprietaire_demande demandeur,
+        iepp_demande inspection,
+        service_demande service,
+        localite_demande localite,
+        validite_demande validite,
+        etat_demande statut,
+        couverture_demande couverture,
+        description_demande description
     ';
 
 
@@ -26,7 +26,7 @@ class Demande_Model extends CI_Model
      */
     public function demande($id)
     {
-        $qry= $this->db->get_where($this->demande_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->demande_table,array('id_demande'=>$id));
         return $qry->row();
     }
 
@@ -52,7 +52,7 @@ class Demande_Model extends CI_Model
         if ($param === '') {
             return $this->db->get()->result();
         } else {
-            $this->db->where('id',$param);
+            $this->db->where('id_demande',$param);
             $this->db->or_where('num_demande',$param);
             return $this->db->get()->row();
         }
@@ -78,10 +78,10 @@ class Demande_Model extends CI_Model
      */
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->demande_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->demande_table,array('id_demande'=>$data['id_demande']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->demande_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->demande_table,$data,['id_demande'=>$query->row('id_demande')]);
         } 
         return false;
     }
@@ -113,7 +113,7 @@ class Demande_Model extends CI_Model
     {
         $this->db->select($this->select);
         $this->db->from($this->demande_table);
-        $this->db->where('id_demandeur',$id);
+        $this->db->where('demandeur',$id);
         $qry = $this->db->get();
         return $qry->result();        
     }
@@ -141,7 +141,7 @@ class Demande_Model extends CI_Model
     {
         $this->db->select($this->select);
         $this->db->from($this->demande_table);
-        $this->db->where('id_iepp',$id);
+        $this->db->where('inspection',$id);
         $qry = $this->db->get();
         return $qry->result();  
     }

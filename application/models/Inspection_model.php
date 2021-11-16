@@ -8,7 +8,7 @@ class Inspection_Model extends CI_Model
 
     public function inspection($id)
     {
-        $qry= $this->db->get_where($this->inspection_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->inspection_table,array('id_iepp'=>$id));
         return $qry->row();        
     }
 
@@ -24,9 +24,9 @@ class Inspection_Model extends CI_Model
      */
     public function inspection_dren($id)
     { 
-        $this->db->select('id, id_dren dren,nom inspection,contact,email,ville');
+        $this->db->select('id_iepp id, dren_iepp dren,nom_iepp inspection,contact_iepp contact,email_iepp email,ville_iepp ville, adresse_iepp adresse');
         $this->db->from($this->inspection_table);
-        $this->db->where('id',$id);
+        $this->db->where('id_iepp',$id);
         $qry = $this->db->get();
         return $qry->row();     
     }
@@ -43,10 +43,10 @@ class Inspection_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->inspection_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->inspection_table,array('id_iepp'=>$data['id_iepp']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->inspection_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->inspection_table,$data,['id_iepp'=>$query->row('id_iepp')]);
         } 
         return false;
     }

@@ -8,15 +8,15 @@ class Fiche_Model extends CI_Model
 
     public function fiche($id)
     {
-        $qry = $this->db->get_where($this->fiche_table,array('id'=>$id));
+        $qry = $this->db->get_where($this->fiche_table,array('id_fiche'=>$id));
         return $qry->row();        
     }
 
     public function all_fiche_by_user($id){
-        $this->db->select('id, num_fiche numero, annee_scolaire annee,num_demande demande, id_demandeur demandeur, id_recepteur recepteur');
+        $this->db->select('id_fiche, num_fiche numero, annee_fiche annee,demande_fiche demande, demandeur_fiche demandeur, accepteur_fiche permutant');
         $this->db->from($this->fiche_table);
-        $this->db->where('id_demandeur',$id);
-        $this->db->or_where('id_recepteur',$id);
+        $this->db->where('demandeur',$id);
+        $this->db->or_where('permutant',$id);
         $qry = $this->db->get();
         return $qry->result();
     }
@@ -36,10 +36,10 @@ class Fiche_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->fiche_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->fiche_table,array('id_fiche'=>$data['id_fiche']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->fiche_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->fiche_table,$data,['id_fiche'=>$query->row('id_fiche')]);
         } 
         return false;
     }

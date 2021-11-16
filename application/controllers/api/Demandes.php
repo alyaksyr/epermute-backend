@@ -23,7 +23,7 @@ class Demandes extends MY_Controller {
         // Construct the parent class
         parent::__construct();
         $this->load->model('demande_model','DemandeModel');
-        $this->load->model('user_model','UserModel');
+        $this->load->model('personnel_model','PersonnelModel');
         $this->load->model('inspection_model','InspectionModel');
         $this->load->model('direction_model','DirectionModel');
 
@@ -95,7 +95,7 @@ class Demandes extends MY_Controller {
                 
                 $row->inspection = $this->InspectionModel->inspection_dren($row->inspection);
                 $row->inspection->dren = $this->DirectionModel->direction_detail($row->inspection->dren);
-                $row->demandeur = $this->UserModel->user_information($row->demandeur);
+                $row->demandeur = $this->PersonnelModel->personnel_information($row->demandeur);
                 $row->demandeur->inspection = $this->InspectionModel->inspection_dren($row->demandeur->inspection);
                 $row->demandeur->inspection->dren = $this->DirectionModel->direction_detail($row->demandeur->inspection->dren);
 
@@ -128,7 +128,7 @@ class Demandes extends MY_Controller {
             } else {
                 $row->inspection = $this->InspectionModel->inspection_dren($row->inspection);
                 $row->inspection->dren = $this->DirectionModel->direction_detail($row->inspection->dren);
-                $row->demandeur = $this->UserModel->user_information($row->demandeur);
+                $row->demandeur = $this->PersonnelModel->personnel($row->demandeur);
                 $row->demandeur->inspection = $this->InspectionModel->inspection_dren($row->demandeur->inspection);
                 $row->demandeur->inspection->dren = $this->DirectionModel->direction_detail($row->demandeur->inspection->dren);
 

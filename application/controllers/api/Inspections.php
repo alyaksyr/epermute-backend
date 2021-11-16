@@ -41,12 +41,13 @@ class Inspections extends MY_Controller {
             
             foreach ($this->InspectionModel->all_inspection() as $row)
             {
-                $data['id'] = (int)$row->id;
-                $data['ville'] = $row->ville;
-                $data['inspection'] = $row->nom;
-                $data['contact'] = $row->contact;
-                $data['email'] = $row->email;
-                $data['direction'] = $this->DirectionModel->direction_detail((int)$row->id_dren);
+                $data['id'] = (int)$row->id_iepp;
+                $data['adresse'] = $row->adresse_iepp;
+                $data['ville'] = $row->ville_iepp;
+                $data['inspection'] = $row->nom_iepp;
+                $data['contact'] = $row->contact_iepp;
+                $data['email'] = $row->email_iepp;
+                $data['direction'] = $this->DirectionModel->direction_detail((int)$row->dren_iepp);
                 $inspection[] = $data;  
             }     
             if (empty($inspection)) {

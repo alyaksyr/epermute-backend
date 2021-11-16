@@ -8,15 +8,15 @@ class Direction_Model extends CI_Model
 
     public function direction($id)
     {
-        $qry= $this->db->get_where($this->direction_table,array('id'=>$id));
+        $qry= $this->db->get_where($this->direction_table,array('id_dren'=>$id));
         return $qry->row();        
     }
 
     public function direction_detail($id)
     {
-        $this->db->select('id, nom direction, ville, contact, email');
+        $this->db->select('id_dren id, nom_dren direction, ville_dren ville, contact_dren contact, email_dren email, adresse_dren adresse');
         $this->db->from($this->direction_table);
-        $this->db->where('id',$id);
+        $this->db->where('id_dren',$id);
         $qry = $this->db->get();
         return $qry->row();        
     }
@@ -39,10 +39,10 @@ class Direction_Model extends CI_Model
 
     public function update(array $data)
     {
-        $query = $this->db->get_where($this->direction_table,array('id'=>$data['id']));
+        $query = $this->db->get_where($this->direction_table,array('id_dren'=>$data['id_dren']));
         if ($this->db->affected_rows()>0) {
         
-            return $this->db->update($this->direction_table,$data,['id'=>$query->row('id')]);
+            return $this->db->update($this->direction_table,$data,['id_dren'=>$query->row('id_dren')]);
         } 
         return false;
     }
